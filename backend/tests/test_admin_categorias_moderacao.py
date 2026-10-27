@@ -62,7 +62,7 @@ def categoria(nome="Eletrônicos"):
     return SimpleNamespace(id=uuid.uuid4(), nome=nome)
 
 
-class RF04TestCase(unittest.TestCase):
+class RF066TestCase(unittest.TestCase):
     def setUp(self):
         app.dependency_overrides.clear()
         self.client = TestClient(app)
