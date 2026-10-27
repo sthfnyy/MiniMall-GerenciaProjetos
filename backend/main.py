@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from .config.database import async_session
-from .controllers import lojista_loja
+from .controllers import (
+    lojista_loja,
+    admin_categorias,
+    admin_moderacao,
+)
 
 app = FastAPI(title="MiniMall API - Gerência de Projetos")
 
@@ -17,6 +21,8 @@ app.add_middleware(
 )
 
 app.include_router(lojista_loja.router)
+app.include_router(admin_categorias.router)
+app.include_router(admin_moderacao.router)
 
 
 @app.get("/health")
