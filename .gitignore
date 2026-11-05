@@ -14,3 +14,10 @@
 
 
 .vscode/
+
+# Frontend e ambiente de testes
+node_modules/
+dist/
+.venv/
+playwright-report/
+test-results/
