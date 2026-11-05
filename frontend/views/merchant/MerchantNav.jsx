@@ -24,4 +24,3 @@ export default function MerchantNav({ current = "configuracao", go }) {
     </nav>
   );
 }
-

@@ -253,4 +253,3 @@ export function createStoreProduct(data, user, values = {}) {
   data.products.push(newProduct);
   return { data, product: newProduct };
 }
-
