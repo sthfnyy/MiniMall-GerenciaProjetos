@@ -1,39 +1,15 @@
-import React, { useState } from "react";
-import { PageTitle } from "../../components/ui";
-import Dashboard from "./Dashboard";
-import Moderation from "./Moderation";
-import Registrations from "./Registrations";
-export default function Admin(props) {
-  const [page, setPage] = useState("dashboard");
-  const pages = [
-    ["dashboard", "Dados da Plataforma"],
-    ["moderation", "Moderação"],
-    ["registrations", "Gestão de Cadastros"],
-  ];
-  return (
-    <>
-      <PageTitle
-        eyebrow="ADMINISTRAÇÃO"
-        title={pages.find(([id]) => id === page)[1]}
-      />
-      <nav className="admin-navigation" aria-label="Painel do administrador">
-        {pages.map(([id, label]) => (
-          <button
-            key={id}
-            aria-current={page === id ? "page" : undefined}
-            onClick={() => setPage(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-      {page === "dashboard" ? (
-        <Dashboard {...props} />
-      ) : page === "moderation" ? (
-        <Moderation {...props} />
-      ) : (
-        <Registrations {...props} />
-      )}
-    </>
-  );
+import React, { useState } from 'react';
+import { Tags, ShieldCheck } from 'lucide-react';
+import { PageTitle } from '../../components/ui';
+import Registrations from './Registrations';
+import Moderation from './Moderation';
+export default function Admin({ notify }) {
+  const [tab, setTab] = useState('categorias');
+  return <section className="admin-page"><PageTitle eyebrow="ADMINISTRAÇÃO" title="Painel administrativo" text="Gerencie as categorias e a moderação do MiniMall." />
+    <nav className="admin-navigation" aria-label="Administração">
+      <button className={tab === 'categorias' ? 'active' : ''} aria-current={tab === 'categorias' ? 'page' : undefined} onClick={() => setTab('categorias')}><Tags size={18} />Categorias</button>
+      <button className={tab === 'moderacao' ? 'active' : ''} aria-current={tab === 'moderacao' ? 'page' : undefined} onClick={() => setTab('moderacao')}><ShieldCheck size={18} />Moderação</button>
+    </nav>
+    {tab === 'categorias' ? <Registrations notify={notify} /> : <Moderation notify={notify} />}
+  </section>;
 }
