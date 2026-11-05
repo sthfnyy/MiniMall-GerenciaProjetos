@@ -11,8 +11,7 @@ import ProductForm from './views/merchant/ProductForm';
 import Admin from './views/admin/Admin';
 import StoreCard from './components/StoreCard';
 import { Empty, Modal } from './components/ui';
-import { money, price } from './services/catalog';
-import { whatsappLink } from './services/contact';
+import { productContact } from './services/contact';
 import { getCurrentSession, getAuthenticatedProfile, observeAuthChanges, signOut, roleHome, canAccessRoute } from './services/auth';
 
 import { emptyCatalog, publicCatalog } from './services/public-catalog';
@@ -92,8 +91,7 @@ export default function App() {
   const onProduct = p => go(`produto/${p.id}`);
   const onStore = id => go(`loja/${id}`);
   const storeCard = s => <StoreCard key={s.id} store={s} data={data} onStore={onStore} />;
-  const currentStore = contact && data.stores.find(s => s.id === contact.store);
-  const message = contact ? `Olá! Tenho interesse em ${contact.name} (${money(price(contact))}). ${location.origin}${location.pathname}#produto/${contact.id}` : '';
+  const contactDetails = contact ? productContact(contact, data.stores, `${location.origin}${location.pathname}#produto/${contact.id}`) : null;
   const nav = [['inicio', 'Início', House], ['explorar', 'Produtos', LayoutGrid], ['lojas', 'Lojas', Store]];
   if (user) nav.push([roleHome(user.role), user.role === 'admin' ? 'Administração' : user.role === 'lojista' ? 'Minha loja' : 'Minha conta', user.role === 'admin' ? ShieldCheck : User]);
   const known = ['inicio', 'explorar', 'lojas', 'login', 'cadastro', 'conta', 'lojista', 'lojista/produtos', 'lojista/produtos/novo', 'admin'].includes(route) || route.startsWith('lojista/produtos/editar/') || product || store;
@@ -130,6 +128,9 @@ export default function App() {
     </main>
     <footer><a className="brand" href="#inicio">mini<span>mall</span><i /></a></footer>
     {toast && <div className="toast" role="status">{toast}<button aria-label="Fechar mensagem" onClick={() => setToast('')}><X size={16} /></button></div>}
-    {contact && <Modal title="Contato com a loja" onClose={() => setContact(null)}><div className="message-preview">{message}</div>{whatsappLink(currentStore?.whatsapp, message) ? <a className="primary full whatsapp" href={whatsappLink(currentStore.whatsapp, message)} target="_blank" rel="noreferrer"><MessageCircle size={18} />Abrir WhatsApp</a> : <p>Esta loja ainda não informou um WhatsApp válido.</p>}</Modal>}
+    {contact && <Modal title={contactDetails ? `Contato com ${contactDetails.store.name}` : 'Contato indisponível'} onClose={() => setContact(null)}>
+      {contactDetails && <div className="message-preview">{contactDetails.message}</div>}
+      {contactDetails?.url ? <a className="primary full whatsapp" href={contactDetails.url} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} />Abrir WhatsApp</a> : <p role="status">Esta loja ainda não informou um WhatsApp válido.</p>}
+    </Modal>}
   </>;
 }

@@ -60,7 +60,7 @@ export default function ProductDetail({
             {p.sale > 0 && <s>{money(p.price)}</s>}
           </div>
           <p>{p.description}</p>
-          <h4>Opções disponíveis</h4>
+          {p.variations.length > 0 && <h4>Opções disponíveis</h4>}
           <div className="variation-list">
             {p.variations.map((v) => (
               <button
