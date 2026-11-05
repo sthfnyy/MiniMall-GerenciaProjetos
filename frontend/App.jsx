@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { House, Store, LayoutGrid, LogOut, ShieldCheck, User, X, MessageCircle, ArrowRight } from 'lucide-react';
 import Home from './views/Home';
 import Catalog from './views/Catalog';
@@ -8,7 +8,7 @@ import AuthPage from './views/AuthPage';
 import StoreSettings from './views/merchant/StoreSettings';
 import ProductList from './views/merchant/ProductList';
 import ProductForm from './views/merchant/ProductForm';
-import Admin from './views/admin/Admin';
+const Admin = lazy(() => import('./views/admin/Admin'));
 import StoreCard from './components/StoreCard';
 import { Empty, Modal } from './components/ui';
 import { productContact } from './services/contact';
@@ -100,7 +100,7 @@ export default function App() {
     <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content').focus(); }}>Pular para o conteúdo</a>
     <header><div className="header-inner">
       <a className="brand" href="#inicio">mini<span>mall</span><i /></a>
-      <form className="header-search" role="search" onSubmit={event => { event.preventDefault(); go('explorar'); }}>
+      <form className="searchbox header-search" role="search" onSubmit={event => { event.preventDefault(); go('explorar'); }}>
         <input aria-label="Pesquisar produtos" placeholder="O que você procura?" value={filters.query} onChange={event => setFilters(f => ({ ...f, query: event.target.value }))} />
         <button className="search-submit" aria-label="Pesquisar"><ArrowRight size={18} /></button>
       </form>
@@ -122,7 +122,7 @@ export default function App() {
         {route === 'lojista' && <StoreSettings user={user} data={data} go={go} notify={setToast} onSaveStore={async saved => { update(d => { d.stores = [...d.stores.filter(s => s.id !== saved.id), saved]; return d; }); if (user.role !== 'lojista') await getCurrentSession().then(syncSession).catch(error => setToast(error.message)); }} />}
         {route === 'lojista/produtos' && <ProductList user={user} data={data} update={update} go={go} notify={setToast} />}
         {(route === 'lojista/produtos/novo' || route.startsWith('lojista/produtos/editar/')) && <ProductForm key={route} user={user} data={data} productId={route.split('/')[3] || null} go={go} update={update} notify={setToast} />}
-        {route === 'admin' && <Admin data={data} update={update} notify={setToast} />}
+        {route === 'admin' && <Suspense fallback={<p role="status">Carregando administração…</p>}><Admin notify={setToast} /></Suspense>}
         {!known && !catalogLoading && <Empty title="Página não encontrada" text="O produto ou a loja não está disponível." action={<button className="primary" onClick={() => go('explorar')}>Ver produtos</button>} />}
       </>}
     </main>

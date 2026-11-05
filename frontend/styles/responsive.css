@@ -1,0 +1,62 @@
+/* Ajustes comuns às telas da Iteração 2. */
+.header-search { flex: 1; min-width: 0; }
+.account-status { margin-left: auto; min-width: 0; }
+.account-status > span { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+main > .error { margin: 16px 0; padding: 12px; overflow-wrap: anywhere; }
+.field, .field > input, .field > select, .field > textarea { min-width: 0; max-width: 100%; }
+.category-form { align-items: end; flex-wrap: wrap; }
+.category-form .field { flex: 1 1 240px; margin: 0; }
+.admin-row > div { min-width: 0; }
+.admin-row strong, .admin-row p, .admin-row small { overflow-wrap: anywhere; }
+.table-wrap { max-width: 100%; overflow-x: auto; }
+.table-wrap:focus-visible { outline: 2px solid var(--blue); }
+.table-wrap table { min-width: 540px; }
+.modal { max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.modal-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.message-preview { white-space: pre-wrap; overflow-wrap: anywhere; }
+.toast { max-width: calc(100vw - 32px); overflow-wrap: anywhere; }
+.product-info, .detail-copy, .store-cover > div { min-width: 0; }
+.product-name, .detail-copy h1, .store-cover h1 { overflow-wrap: anywhere; }
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #4b67ae; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .header-inner { gap: 12px; }
+  .header-search { order: 3; flex-basis: 100%; width: 100%; }
+  .account-status { flex: 0 1 auto; }
+  .account-status > span { max-width: 135px; font-size: 13px; }
+  .nav-inner > div { flex-wrap: wrap; justify-content: flex-start; gap: 0 18px; }
+  .nav-inner button { min-height: 44px; }
+  .section-heading { flex-wrap: wrap; gap: 12px; align-items: start; }
+  .section-heading > .row { flex-wrap: wrap; width: 100%; justify-content: space-between; gap: 8px; }
+  .section-heading .field { width: 100%; }
+  .sort { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .category-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding-bottom: 8px; }
+  .category-row > button { flex: 0 0 auto; min-height: 44px; }
+  .filters { grid-template-columns: minmax(0, 1fr); }
+  .filters .field:first-child { grid-column: auto; }
+  .applied-filters { flex-wrap: wrap; }
+  .admin-navigation { flex-wrap: wrap; gap: 8px; }
+  .admin-navigation > button { flex: 1 1 120px; min-height: 44px; white-space: normal; }
+  .admin-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .admin-row > .row { flex-wrap: wrap; }
+  .admin-row button, .modal-actions button { min-height: 44px; }
+  .category-form { flex-direction: column; align-items: stretch; }
+  .category-form .field { flex: auto; }
+  .category-form button { width: 100%; }
+  .merchant-grid { grid-template-columns: minmax(0, 1fr); }
+  .merchant-actions, .modal-actions { flex-wrap: wrap; gap: 10px; }
+  .merchant-actions > button, .modal-actions > button { flex: 1 1 140px; }
+  .product-detail { grid-template-columns: minmax(0, 1fr); }
+  .store-summary { flex-wrap: wrap; }
+  .store-summary > button { width: 100%; }
+  input, select, textarea { font-size: 16px; }
+}
+@media (max-width: 380px) {
+  .product-grid { gap: 12px; }
+  .product-info { padding-left: 10px; padding-right: 10px; }
+  .account-status > span { max-width: 100px; }
+  .sort { max-width: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
