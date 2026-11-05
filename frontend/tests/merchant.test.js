@@ -21,3 +21,19 @@ test('loja usa POST para criar, PATCH para editar e endpoint de nova aprovação
   assert.deepEqual(calls.map(c => c.method), ['POST', 'PATCH', 'POST']);
   assert.equal(calls[2].path, '/lojista/loja/solicitar-aprovacao');
 });
+
+test('produtos usam endpoints do lojista com UUID sem conversão numérica', async () => {
+  const calls = []; const api = createMerchantService(async (path, options) => { calls.push({ path, ...options }); return {}; });
+  const product = { titulo: 'Caderno', preco_base: '25.90', categoria_id: 'cat-uuid', ativo: true };
+  await api.saveProduct(product); await api.saveProduct(product, 'produto-uuid'); await api.deleteProduct('produto-uuid');
+  assert.deepEqual(calls.map(c => c.method), ['POST', 'PATCH', 'DELETE']);
+  assert.equal(calls[1].path, '/lojista/produtos/produto-uuid');
+  assert.equal(JSON.parse(calls[0].body).preco_base, '25.90');
+});
+test('produto rejeita valores não finitos, casas excedentes e imagem insegura', async () => {
+  const { productPayload } = await import('../services/merchant-api.js');
+  const good = { titulo: 'Caderno', preco_base: '25.90', categoria_id: 'cat', ativo: true };
+  for (const preco of ['', 'abc', 'Infinity', '-1', '2.999']) assert.throws(() => productPayload({ ...good, preco_base: preco }));
+  assert.throws(() => productPayload({ ...good, foto_principal_url: 'javascript:alert(1)' }), /URL/);
+  assert.equal(productPayload({ ...good, loja_id: 'outra' }).loja_id, undefined);
+});

@@ -8,3 +8,12 @@ export function mapStore(store) {
     category: '', motivo_rejeicao: store.motivo_rejeicao,
   };
 }
+export function mapProduct(product, categories = []) {
+  return {
+    id: product.id, store: product.loja_id, name: product.titulo,
+    description: product.descricao || '', price: Number(product.preco_base), sale: 0,
+    category: product.nome_categoria || categories.find(c => c.id === product.categoria_id)?.nome || '',
+    image: /^https?:\/\//i.test(product.foto_principal_url || '') ? product.foto_principal_url : '/images/product-placeholder.svg',
+    variations: [], deleted: !product.ativo,
+  };
+}
