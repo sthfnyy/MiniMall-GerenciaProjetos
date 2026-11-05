@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Field, Empty } from "../components/ui";
 import ProductCard from "../components/ProductCard";
-import { searchProducts } from "../services/search";
+import { publicCatalog } from "../services/public-catalog";
 import { money } from "../services/catalog";
 export default function Catalog({
   data,
@@ -24,13 +24,21 @@ export default function Catalog({
       max: "",
       sort: "relevancia",
     });
-  let list = [],
-    error = "";
-  try {
-    list = searchProducts(data, filters);
-  } catch (err) {
-    error = err.message;
-  }
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true); setError(''); setList([]);
+    const timer = setTimeout(() => {
+      publicCatalog.products(filters, data.categoryRecords || [], controller.signal).then(result => {
+        if (!controller.signal.aborted) setList(result);
+      }).catch(err => { if (err.name !== 'AbortError') setError(err.message); })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [filters.query, filters.category, filters.store, filters.min, filters.max, filters.sort, data.categoryRecords, revision]);
   const active =
     filters.query ||
     filters.category ||
@@ -63,7 +71,7 @@ export default function Catalog({
       </section>
       <div className="section-heading">
         <span aria-live="polite">
-          {list.length} {list.length === 1 ? "produto" : "produtos"}
+          {loading ? "Pesquisando…" : `${list.length} ${list.length === 1 ? "produto" : "produtos"}`}
         </span>
         <div className="row">
           <label className="sort">
@@ -132,7 +140,7 @@ export default function Catalog({
             ["category", filters.category],
             [
               "store",
-              data.stores.find((s) => s.id === Number(filters.store))?.name,
+              data.stores.find((s) => String(s.id) === String(filters.store))?.name,
             ],
           ].map(
             ([key, label]) =>
@@ -162,9 +170,9 @@ export default function Catalog({
           </button>
         </div>
       )}
-      {error ? (
+      {loading ? <p role="status">Pesquisando produtos…</p> : error ? (
         <p className="error" role="alert">
-          {error}
+          {error} <button className="text-button" onClick={() => setRevision(r => r + 1)}>Tentar novamente</button>
         </p>
       ) : list.length ? (
         <div className="product-grid">
@@ -172,10 +180,10 @@ export default function Catalog({
             <ProductCard
               key={p.id}
               product={p}
-              store={data.stores.find((s) => s.id === p.store)}
+              store={data.stores.find((s) => s.id === p.store) || { id: p.store, name: "Ver loja" }}
               onProduct={onProduct}
               onStore={onStore}
-              isFavorite={isFavorite(p.id)}
+              isFavorite={isFavorite?.(p.id) || false}
               onToggleFavorite={onToggleFavorite}
             />
           ))}

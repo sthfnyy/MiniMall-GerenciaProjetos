@@ -20,29 +20,8 @@ export default function Home({
     preference.addEventListener("change", sync);
     return () => preference.removeEventListener("change", sync);
   }, []);
-  const picks = [2, 4, 3, 5]
-    .map((id) => products.find((p) => p.id === id))
-    .filter(Boolean);
-  const categories = [
-    {
-      name: "Vestuário",
-      title: "Vestuário",
-      image: products.find((p) => p.category === "Vestuário")?.image,
-      tag: "01 / MODA",
-    },
-    {
-      name: "Casa e decoração",
-      title: "Casa e decoração",
-      image: products.find((p) => p.category === "Casa e decoração")?.image,
-      tag: "02 / CASA",
-    },
-    {
-      name: "Perfumaria",
-      title: "Perfumaria",
-      image: products.find((p) => p.category === "Perfumaria")?.image,
-      tag: "03 / CUIDADO",
-    },
-  ];
+  const picks = products.slice(0, 4);
+  const categories = [...new Set(products.map(p => p.category))].filter(Boolean).slice(0, 3).map((name, i) => ({ name, title: name, image: products.find(p => p.category === name)?.image, tag: `0${i + 1} / EXPLORE` }));
   function move(e) {
     if (paused || e.pointerType === "touch") return;
     const rect = e.currentTarget.getBoundingClientRect();

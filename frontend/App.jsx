@@ -11,14 +11,19 @@ import ProductForm from './views/merchant/ProductForm';
 import Admin from './views/admin/Admin';
 import StoreCard from './components/StoreCard';
 import { Empty, Modal } from './components/ui';
-import { seed, money, price } from './services/catalog';
+import { money, price } from './services/catalog';
 import { whatsappLink } from './services/contact';
 import { getCurrentSession, getAuthenticatedProfile, observeAuthChanges, signOut, roleHome, canAccessRoute } from './services/auth';
+
+import { emptyCatalog, publicCatalog } from './services/public-catalog';
 
 const emptyFilters = { query: '', category: '', store: '', min: '', max: '', sort: 'relevancia' };
 export default function App() {
   const [route, setRoute] = useState(location.hash.slice(1) || 'inicio');
-  const [data, setData] = useState(() => structuredClone(seed));
+  const [data, setData] = useState(emptyCatalog);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -63,6 +68,14 @@ export default function App() {
     const id = setTimeout(() => setToast(''), 6000);
     return () => clearTimeout(id);
   }, [toast]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setCatalogLoading(true); setCatalogError('');
+    publicCatalog.load(controller.signal).then(setData).catch(error => {
+      if (error.name !== 'AbortError') { setCatalogError(error.message); setData(emptyCatalog); }
+    }).finally(() => { if (!controller.signal.aborted) setCatalogLoading(false); });
+    return () => controller.abort();
+  }, [route, catalogRevision]);
   async function login(session) {
     const profile = await syncSession(session);
     if (profile) { go(roleHome(profile.role)); setToast('Você entrou na conta.'); }
@@ -97,6 +110,8 @@ export default function App() {
     </div></header>
     <nav className="nav-bar" aria-label="Navegação principal"><div className="nav-inner"><div>{nav.map(([path, label, Icon]) => <button key={path} aria-current={route === path ? 'page' : undefined} className={route === path ? 'active' : ''} onClick={() => go(path)}><Icon size={16} />{label}</button>)}</div></div></nav>
     <main id="main-content" tabIndex={-1} className={route === 'inicio' ? 'home-main' : ''}>
+      {catalogError && <div className="error" role="alert">{catalogError}<button className="text-button" onClick={() => setCatalogRevision(r => r + 1)}>Recarregar vitrine</button></div>}
+      {catalogLoading && <p role="status">Carregando vitrine…</p>}
       {authError && <div className="error" role="alert">{authError} <button className="text-button" onClick={() => getCurrentSession().then(syncSession).catch(() => {})}>Tentar novamente</button></div>}
       {restricted ? loadingAuth ? <p role="status">Verificando acesso…</p> : <Empty title="Acesso restrito" text="Entre com uma conta autorizada para acessar esta página." action={<button className="primary" onClick={() => go('login')}>Entrar</button>} /> : <>
         {route === 'inicio' && <Home products={products} stores={approved} onProduct={onProduct} onExplore={category => { setFilters({ ...emptyFilters, category: category || '' }); go('explorar'); }} onStores={() => go('lojas')} storeCard={storeCard} />}
@@ -110,7 +125,7 @@ export default function App() {
         {route === 'lojista/produtos' && <ProductList user={user} data={data} update={update} go={go} notify={setToast} />}
         {(route === 'lojista/produtos/novo' || route.startsWith('lojista/produtos/editar/')) && <ProductForm key={route} user={user} data={data} productId={route.split('/')[3] || null} go={go} update={update} notify={setToast} />}
         {route === 'admin' && <Admin data={data} update={update} notify={setToast} />}
-        {!known && <Empty title="Página não encontrada" text="O produto ou a loja não está disponível." action={<button className="primary" onClick={() => go('explorar')}>Ver produtos</button>} />}
+        {!known && !catalogLoading && <Empty title="Página não encontrada" text="O produto ou a loja não está disponível." action={<button className="primary" onClick={() => go('explorar')}>Ver produtos</button>} />}
       </>}
     </main>
     <footer><a className="brand" href="#inicio">mini<span>mall</span><i /></a></footer>
