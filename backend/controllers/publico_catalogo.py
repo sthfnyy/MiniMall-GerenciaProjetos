@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+import uuid
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
-from ..models import Categoria
+from ..models import Categoria, Loja, Produto, StatusLoja
 from ..schemas import CategoriaOut
+from ..schemas_produtos import ProdutoOut, ProdutoVitrineOut
 
 router = APIRouter(prefix="/publico", tags=["Vitrine pública"])
 
@@ -13,18 +18,6 @@ router = APIRouter(prefix="/publico", tags=["Vitrine pública"])
 async def listar_categorias(db: AsyncSession = Depends(get_db)):
     resultado = await db.execute(select(Categoria).order_by(Categoria.nome))
     return resultado.scalars().all()
-
-# A vitrine expõe apenas campos públicos, sem IDs de usuário e dados de moderação.
-import uuid
-from decimal import Decimal
-
-from fastapi import HTTPException, Query
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import or_
-
-from ..models import Loja, Produto, StatusLoja
-from ..schemas_produtos import ProdutoOut, ProdutoVitrineOut
-
 
 class LojaPublicaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

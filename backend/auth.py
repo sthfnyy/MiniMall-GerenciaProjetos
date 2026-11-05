@@ -8,13 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config.database import get_db
+from .config.config import settings
 from .models import Profile, UserRole
 
 security = HTTPBearer(auto_error=False)
-
-SUPABASE_JWKS_URL = (
-    "https://fbwhpontyucoifhehysn.supabase.co/auth/v1/.well-known/jwks.json"
-)
 
 
 async def get_current_user_id(
@@ -26,11 +23,15 @@ async def get_current_user_id(
             detail="Credenciais de autenticação não fornecidas",
         )
 
+    if not settings.supabase_url:
+        raise HTTPException(status_code=503, detail="Supabase Auth não configurado")
+    emissor = f"{settings.supabase_url.rstrip('/')}/auth/v1"
+    jwks_url = f"{emissor}/.well-known/jwks.json"
     token = credentials.credentials
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(SUPABASE_JWKS_URL)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(jwks_url)
             response.raise_for_status()
             jwks = response.json()
 
@@ -51,6 +52,7 @@ async def get_current_user_id(
             key,
             algorithms=["ES256"],
             audience="authenticated",
+            issuer=emissor,
         )
 
     except (JWTError, httpx.HTTPError, KeyError, ValueError):
