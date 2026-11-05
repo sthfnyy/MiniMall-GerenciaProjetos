@@ -106,7 +106,7 @@ export default function App() {
         {product && <ProductDetail product={product} store={data.stores.find(s => s.id === product.store)} go={go} contact={() => setContact(product)} />}
         {['login', 'cadastro'].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
         {route === 'conta' && <section className="panel"><h1>Minha conta</h1><p>{user.name}</p><p>{user.email}</p><button className="primary" onClick={() => go('lojista')}>Cadastrar minha loja</button></section>}
-        {route === 'lojista' && <StoreSettings user={user} data={data} go={go} notify={setToast} onSaveStore={saved => update(d => { d.stores = [...d.stores.filter(s => s.id !== saved.id), saved]; return d; })} />}
+        {route === 'lojista' && <StoreSettings user={user} data={data} go={go} notify={setToast} onSaveStore={async saved => { update(d => { d.stores = [...d.stores.filter(s => s.id !== saved.id), saved]; return d; }); if (user.role !== 'lojista') await getCurrentSession().then(syncSession).catch(error => setToast(error.message)); }} />}
         {route === 'lojista/produtos' && <ProductList user={user} data={data} update={update} go={go} notify={setToast} />}
         {(route === 'lojista/produtos/novo' || route.startsWith('lojista/produtos/editar/')) && <ProductForm key={route} user={user} data={data} productId={route.split('/')[3] || null} go={go} update={update} notify={setToast} />}
         {route === 'admin' && <Admin data={data} update={update} notify={setToast} />}
