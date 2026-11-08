@@ -8,7 +8,8 @@ export function getAuthenticatedRoute(role) {
 
 export function canAccessRoute(route, user) {
   if (route === "conta") return Boolean(user);
-  if (route === "lojista" || route.startsWith("lojista/")) return user?.role === "lojista";
+  if (route === "lojista") return Boolean(user);
+  if (route.startsWith("lojista/")) return user?.role === "lojista";
   return true;
 }
 

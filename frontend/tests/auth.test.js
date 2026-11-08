@@ -87,8 +87,9 @@ test("sessão pode ser restaurada e observada", async () => {
 test("role controla as rotas protegidas", () => {
   assert.equal(canAccessRoute("conta", null), false);
   assert.equal(canAccessRoute("conta", { role: "consumidor" }), true);
-  assert.equal(canAccessRoute("lojista", { role: "consumidor" }), false);
+  assert.equal(canAccessRoute("lojista", { role: "consumidor" }), true);
   assert.equal(canAccessRoute("lojista", { role: "lojista" }), true);
+  assert.equal(canAccessRoute("lojista/produtos", { role: "consumidor" }), false);
 });
 
 test("logout encerra a sessão no provedor", async () => {

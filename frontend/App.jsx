@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { House, LogOut, User, X } from "lucide-react";
+import { House, LogOut, Store, User, X } from "lucide-react";
 import AuthPage from "./views/AuthPage";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
+import StoreSettings from "./views/merchant/StoreSettings";
 import { Empty } from "./components/ui";
 import {
   canAccessRoute,
@@ -80,10 +81,13 @@ export default function App() {
     } catch (error) { setToast(error.message); }
   }
 
-  const known = ["inicio", "login", "cadastro", "conta", "lojista"].includes(route);
+  const known = ["inicio", "login", "cadastro", "conta", "lojista", "lojista/produtos"].includes(route);
   const restricted = !canAccessRoute(route, user);
   const nav = [["inicio", "Início", House]];
-  if (user) nav.push(["conta", "Minha conta", User]);
+  if (user) {
+    nav.push(["conta", "Minha conta", User]);
+    nav.push(["lojista", user.role === "lojista" ? "Minha loja" : "Cadastrar loja", Store]);
+  }
 
   return <>
     <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -98,7 +102,11 @@ export default function App() {
         {route === "inicio" && <section className="panel welcome-panel"><h1>MiniMall</h1><p>Entre ou crie sua conta para acessar seu perfil.</p>{!user && <button className="primary" onClick={() => go("login")}>Entrar</button>}</section>}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
         {route === "conta" && <ConsumerProfile user={user} onLogout={logout} />}
-        {route === "lojista" && <Empty title="Painel do lojista" text="A interface da loja será migrada na próxima etapa." action={<button className="secondary" onClick={() => go("conta")}>Ver meu perfil</button>} />}
+        {route === "lojista" && <StoreSettings user={user} go={go} notify={setToast} onStoreCreated={async () => {
+          const session = await getCurrentSession();
+          await syncSession(session);
+        }} />}
+        {route === "lojista/produtos" && <Empty title="Catálogo de produtos" text="O gerenciamento de produtos será migrado na próxima etapa." action={<button className="secondary" onClick={() => go("lojista")}>Voltar à loja</button>} />}
         {!known && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
       </>}
     </main>

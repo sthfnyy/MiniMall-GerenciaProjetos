@@ -1217,15 +1217,6 @@ td small {
   background: #f3f6ff;
   color: var(--blue);
 }
-.demo-notice {
-  font-size: 12px !important;
-  line-height: 1.7;
-  background: #f6f7fa;
-  padding: 13px;
-  border-radius: 7px;
-  color: #8a91a0 !important;
-  margin: 17px 0;
-}
 .stars {
   display: flex;
   gap: 7px;
