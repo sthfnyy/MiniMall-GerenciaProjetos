@@ -3,6 +3,8 @@ import { House, LogOut, Store, User, X } from "lucide-react";
 import AuthPage from "./views/AuthPage";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
 import StoreSettings from "./views/merchant/StoreSettings";
+import ProductList from "./views/merchant/ProductList";
+import ProductForm from "./views/merchant/ProductForm";
 import { Empty } from "./components/ui";
 import {
   canAccessRoute,
@@ -81,7 +83,8 @@ export default function App() {
     } catch (error) { setToast(error.message); }
   }
 
-  const known = ["inicio", "login", "cadastro", "conta", "lojista", "lojista/produtos"].includes(route);
+  const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
+  const known = ["inicio", "login", "cadastro", "conta", "lojista", "lojista/produtos", "lojista/produtos/novo"].includes(route) || route.startsWith("lojista/produtos/editar/");
   const restricted = !canAccessRoute(route, user);
   const nav = [["inicio", "Início", House]];
   if (user) {
@@ -106,7 +109,8 @@ export default function App() {
           const session = await getCurrentSession();
           await syncSession(session);
         }} />}
-        {route === "lojista/produtos" && <Empty title="Catálogo de produtos" text="O gerenciamento de produtos será migrado na próxima etapa." action={<button className="secondary" onClick={() => go("lojista")}>Voltar à loja</button>} />}
+        {route === "lojista/produtos" && <ProductList go={go} notify={setToast} />}
+        {productFormRoute && <ProductForm key={route} productId={route.startsWith("lojista/produtos/editar/") ? route.split("/")[3] : null} go={go} notify={setToast} />}
         {!known && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
       </>}
     </main>
