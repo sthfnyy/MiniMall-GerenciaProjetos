@@ -108,3 +108,68 @@ export async function updateMerchantStore(values, request = apiRequest) {
 export async function requestStoreApproval(request = apiRequest) {
   return normalizeStoreFromApi(await request("/lojista/loja/solicitar-aprovacao", { method: "POST" }));
 }
+
+export function normalizeProductFromApi(product) {
+  return {
+    ...product,
+    id: String(product.id),
+    loja_id: String(product.loja_id),
+    categoria_id: String(product.categoria_id),
+    preco_base: Number(product.preco_base),
+    ativo: Boolean(product.ativo),
+  };
+}
+
+export function productPayload(values = {}) {
+  const titulo = values.titulo?.trim() || "";
+  const categoriaId = values.categoria_id?.trim() || "";
+  const preco = Number(values.preco_base);
+  const foto = values.foto_principal_url?.trim() || "";
+  if (titulo.length < 2) throw new Error("Informe o nome do produto (mínimo de 2 caracteres).");
+  if (!categoriaId) throw new Error("Selecione uma categoria.");
+  if (values.preco_base === "" || !Number.isFinite(preco) || preco < 0 || preco > 99999999.99) throw new Error("Informe um preço válido.");
+  if (Math.abs(preco * 100 - Math.round(preco * 100)) > 0.0001) throw new Error("O preço deve ter no máximo duas casas decimais.");
+  if (foto && !/^https?:\/\//i.test(foto)) throw new Error("Informe uma URL de imagem com http ou https.");
+  return {
+    categoria_id: categoriaId,
+    titulo,
+    descricao: values.descricao?.trim() || null,
+    preco_base: preco.toFixed(2),
+    foto_principal_url: foto || null,
+    ativo: Boolean(values.ativo),
+  };
+}
+
+export async function getStoreProducts(request = apiRequest) {
+  const products = await request("/lojista/produtos");
+  return products.map(normalizeProductFromApi);
+}
+
+export async function getStoreProduct(productId, request = apiRequest) {
+  return normalizeProductFromApi(await request(`/lojista/produtos/${encodeURIComponent(productId)}`));
+}
+
+export async function createStoreProduct(values, request = apiRequest) {
+  const product = await request("/lojista/produtos", {
+    method: "POST",
+    body: JSON.stringify(productPayload(values)),
+  });
+  return normalizeProductFromApi(product);
+}
+
+export async function updateStoreProduct(productId, values, request = apiRequest) {
+  const product = await request(`/lojista/produtos/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(productPayload(values)),
+  });
+  return normalizeProductFromApi(product);
+}
+
+export async function deleteStoreProduct(productId, request = apiRequest) {
+  await request(`/lojista/produtos/${encodeURIComponent(productId)}`, { method: "DELETE" });
+  return true;
+}
+
+export async function fetchProductCategories() {
+  throw new Error("O backend ainda não disponibiliza categorias para o painel do lojista.");
+}
