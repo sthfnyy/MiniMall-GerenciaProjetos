@@ -2273,6 +2273,7 @@ td {
 .error-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 12px 18px;
   border-radius: 12px;
@@ -2280,6 +2281,12 @@ td {
   border: 1px solid #fecaca;
   color: #b91c1c;
   font-size: 14px;
+}
+
+.error-banner > span {
+  flex: 1 1 220px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .merchant-actions {
@@ -2330,6 +2337,7 @@ td {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
+  min-height: 44px;
 }
 
 .merchant-navigation button[aria-current="page"] {
@@ -2431,7 +2439,7 @@ td {
 
 .merchant-products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 22px;
 }
 
@@ -2533,6 +2541,7 @@ td {
   font-weight: 500;
   color: var(--ink);
   cursor: pointer;
+  min-height: 44px;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
@@ -2673,6 +2682,7 @@ td {
   .merchant-toolbar-filters {
     flex-direction: column;
     align-items: stretch;
+    min-width: 0;
   }
 
   .merchant-search-box {
@@ -2681,6 +2691,7 @@ td {
 
   .merchant-toolbar-actions {
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 
   .merchant-modal-detail {
@@ -2773,4 +2784,17 @@ td {
   font-size: 13px;
   background: #ffffff;
   color: var(--ink);
+}
+
+@media (max-width: 768px) {
+  .product-upload-container {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .product-upload-preview {
+    height: auto;
+    min-height: 180px;
+    aspect-ratio: 4 / 3;
+  }
 }
