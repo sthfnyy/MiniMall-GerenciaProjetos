@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   buildWhatsAppLink,
   buildWhatsAppMessage,
@@ -65,4 +66,14 @@ test("retorna null para nome de produto vazio", () => {
 test("retorna null para preço informado mas inválido", () => {
   assert.equal(buildWhatsAppLink({ whatsapp: "89999998888", productName: "Produto", price: "abc" }), null);
   assert.equal(buildWhatsAppLink({ whatsapp: "89999998888", productName: "Produto", price: -1 }), null);
+});
+
+test("componente reutiliza o serviço e expõe um link externo acessível", async () => {
+  const source = await readFile(new URL("../components/WhatsAppContactButton.jsx", import.meta.url), "utf8");
+  assert.match(source, /buildWhatsAppLink\(\{ whatsapp, productName, price \}\)/);
+  assert.match(source, /if \(!href\) return null/);
+  assert.match(source, /target="_blank"/);
+  assert.match(source, /rel="noopener noreferrer"/);
+  assert.match(source, />Falar no WhatsApp</);
+  assert.match(source, /aria-hidden="true"/);
 });
