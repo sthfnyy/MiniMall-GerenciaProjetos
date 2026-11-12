@@ -3,13 +3,22 @@ import { getSupabaseClient, isSupabaseConfigured } from "./supabase.js";
 const API_URL = import.meta.env?.VITE_API_URL || "http://127.0.0.1:8000";
 
 export function getAuthenticatedRoute(role) {
-  return role === "lojista" ? "lojista" : "conta";
+  if (role === "consumidor") return "consumidor";
+  if (role === "lojista") return "lojista";
+  if (role === "admin") return "admin";
+  return "inicio";
 }
 
 export function canAccessRoute(route, user) {
-  if (route === "conta") return Boolean(user);
-  if (route === "lojista") return Boolean(user);
-  if (route.startsWith("lojista/")) return user?.role === "lojista";
+  if (route === "consumidor" || route.startsWith("consumidor/")) {
+    return user?.role === "consumidor";
+  }
+  if (route === "lojista" || route.startsWith("lojista/")) {
+    return user?.role === "lojista";
+  }
+  if (route === "admin" || route.startsWith("admin/")) {
+    return user?.role === "admin";
+  }
   return true;
 }
 
