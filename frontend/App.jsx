@@ -153,7 +153,30 @@ export default function App() {
   return <>
     <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
     <header><div className="header-inner">
-      <a className="brand" href="#inicio">mini<span>mall</span><i /></a>
+      <a className="brand" href="#inicio">
+        <span className="brand-symbol">
+          <svg
+            viewBox="0 0 32 32"
+            width="27"
+            height="27"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 25V12a5.5 5.5 0 0 1 11 0v13-13a5.5 5.5 0 0 1 11 0v13"
+              stroke="currentColor"
+              strokeWidth="3.5"
+            />
+            <path
+              d="M3 26h26"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+          </svg>
+        </span>
+        mini<span>mall</span>
+        <i />
+      </a>
       <form
         className="searchbox"
         onSubmit={(e) => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { buildWhatsAppLink } from "../services/contact.js";
 
 export default function WhatsAppContactButton({ whatsapp, productName, price }) {
@@ -7,14 +7,21 @@ export default function WhatsAppContactButton({ whatsapp, productName, price }) 
   if (!href) return null;
 
   return (
-    <a
-      className="primary full whatsapp"
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <MessageCircle size={18} aria-hidden="true" focusable="false" />
-      <span>Falar no WhatsApp</span>
-    </a>
+    <>
+      <a
+        className="primary whatsapp full"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <MessageCircle size={20} aria-hidden="true" focusable="false" />
+        <span>Falar no WhatsApp</span>
+        <ArrowUpRight size={18} aria-hidden="true" focusable="false" />
+      </a>
+      <div className="contact-note">
+        <ShieldCheck size={19} aria-hidden="true" focusable="false" />
+        <span>Combine a compra com a loja pelo WhatsApp.</span>
+      </div>
+    </>
   );
 }

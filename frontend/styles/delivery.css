@@ -433,6 +433,13 @@ header {
   font-weight: 500;
   letter-spacing: -1.8px;
 }
+.admin-navigation {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+.admin-navigation button {
+  border-radius: 24px;
+}
 .dashboard-stats .stat {
   border-radius: 24px;
   border: 1px solid var(--border);
@@ -835,6 +842,9 @@ header {
 .dashboard-stats .stat:first-child {
   background: #29372f;
 }
+.admin-navigation button {
+  border-radius: 30px;
+}
 @media (min-width: 761px) {
   .nav-bar {
     border-bottom: 0;
@@ -1020,5 +1030,34 @@ header {
 @media (max-width: 760px) {
   .floating-stage {
     height: 375px;
+  }
+}
+
+/* RNF02: alvos de toque no mobile. Desktop permanece idêntico ao MiniMall original. */
+@media (max-width: 760px) {
+  .search-submit,
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .account-button,
+  .text-button,
+  .motion-toggle,
+  .home-secondary,
+  .category-row button,
+  .outline,
+  .sort select,
+  .product-detail .store-link {
+    min-height: 44px;
+  }
+  .text-button,
+  .back-link,
+  .product-detail .store-link {
+    align-items: center;
+  }
+  .back-link {
+    display: flex;
+    width: fit-content;
+    min-height: 44px;
   }
 }
