@@ -1,11 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { House, LogOut, Store, User, X } from "lucide-react";
+import { ArrowRight, House, LayoutGrid, LogOut, Search, ShieldCheck, Store, User, X } from "lucide-react";
+import Home from "./views/Home";
+import Catalog from "./views/Catalog";
+import StorePage from "./views/StorePage";
+import ProductDetail from "./views/ProductDetail";
 import AuthPage from "./views/AuthPage";
+import Admin from "./views/admin/Admin";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
 import StoreSettings from "./views/merchant/StoreSettings";
 import ProductList from "./views/merchant/ProductList";
 import ProductForm from "./views/merchant/ProductForm";
+import StoreCard from "./components/StoreCard";
 import { Empty } from "./components/ui";
+import { emptyCatalog, publicCatalog } from "./services/catalog";
 import {
   canAccessRoute,
   getAuthenticatedProfile,
@@ -15,8 +22,22 @@ import {
   signOut,
 } from "./services/auth";
 
+const emptyFilters = {
+  query: "",
+  category: "",
+  store: "",
+  min: "",
+  max: "",
+  sort: "relevancia",
+};
+
 export default function App() {
   const [route, setRoute] = useState(location.hash.slice(1) || "inicio");
+  const [data, setData] = useState(emptyCatalog);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [filters, setFilters] = useState(emptyFilters);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState("");
@@ -64,6 +85,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setCatalogLoading(true);
+    setCatalogError("");
+    publicCatalog
+      .load(controller.signal)
+      .then((catalog) => {
+        if (!controller.signal.aborted) setData(catalog);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError" && !controller.signal.aborted) {
+          setCatalogError(error.message);
+          setData(emptyCatalog);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCatalogLoading(false);
+      });
+    return () => controller.abort();
+  }, [catalogRevision]);
+
+  useEffect(() => {
     if (!toast) return undefined;
     const id = setTimeout(() => setToast(""), 4500);
     return () => clearTimeout(id);
@@ -83,34 +125,82 @@ export default function App() {
     } catch (error) { setToast(error.message); }
   }
 
+  const approved = (data.stores || []).filter((s) => s.status === "aprovada");
+  const products = (data.products || []).filter((p) => !p.deleted && p.active !== false);
+  const product = products.find((p) => route === `produto/${p.id}`);
+  const store = approved.find((s) => route === `loja/${s.id}`);
+
+  const onProduct = (p) => go(`produto/${p.id}`);
+  const onStore = (id) => go(`loja/${id}`);
+  const storeCard = (s) => <StoreCard key={s.id} store={s} data={data} onStore={onStore} />;
+
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
-  const known = ["inicio", "login", "cadastro", "consumidor", "admin", "lojista", "lojista/produtos", "lojista/produtos/novo"].includes(route) || route.startsWith("lojista/produtos/editar/");
+  const known =
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin"].includes(route) ||
+    productFormRoute ||
+    Boolean(product) ||
+    Boolean(store);
   const restricted = !canAccessRoute(route, user);
-  const nav = [["inicio", "Início", House]];
+  const nav = [
+    ["inicio", "Início", House],
+    ["explorar", "Produtos", LayoutGrid],
+    ["lojas", "Lojas", Store],
+  ];
   if (user?.role === "consumidor") nav.push(["consumidor", "Minha conta", User]);
   if (user?.role === "lojista") nav.push(["lojista", "Minha loja", Store]);
+  if (user?.role === "admin") nav.push(["admin", "Administração", ShieldCheck]);
 
   return <>
     <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
     <header><div className="header-inner">
       <a className="brand" href="#inicio">mini<span>mall</span><i /></a>
+      <form
+        className="searchbox"
+        onSubmit={(e) => {
+          e.preventDefault();
+          go("explorar");
+        }}
+      >
+        <Search size={19} />
+        <input
+          aria-label="Buscar produtos"
+          placeholder="Buscar produtos"
+          value={filters.query}
+          onChange={(e) => {
+            setFilters((f) => ({ ...f, query: e.target.value }));
+            if (route !== "explorar") go("explorar");
+          }}
+        />
+        <button className="search-submit" aria-label="Pesquisar">
+          <ArrowRight size={18} />
+        </button>
+      </form>
       {authLoading ? <span role="status">Verificando sessão…</span> : user ? <div className="row account-status"><span>{user.name}</span><button className="icon-button" aria-label="Sair" onClick={logout}><LogOut size={18} /></button></div> : <button className="account-button" onClick={() => go("login")}>Entrar</button>}
     </div></header>
     <nav className="nav-bar" aria-label="Navegação principal"><div className="nav-inner"><div>{nav.map(([path, label, Icon]) => <button key={path} aria-current={route === path ? "page" : undefined} className={route === path ? "active" : ""} onClick={() => go(path)}><Icon size={16} />{label}</button>)}</div></div></nav>
-    <main id="main-content" tabIndex={-1}>
+    <main id="main-content" tabIndex={-1} className={route === "inicio" ? "home-main" : ""}>
+      {catalogError && <div className="error" role="alert">{catalogError} <button className="text-button" onClick={() => setCatalogRevision((r) => r + 1)}>Recarregar vitrine</button></div>}
+      {catalogLoading && ["inicio", "explorar", "lojas"].includes(route) && <p role="status">Carregando vitrine…</p>}
       {authError && <div className="error" role="alert">{authError}</div>}
       {restricted ? authLoading ? <p role="status">Verificando acesso…</p> : <Empty title="Acesso restrito" text="Entre com uma conta autorizada para acessar esta página." action={<button className="primary" onClick={() => go("login")}>Entrar</button>} /> : <>
-        {route === "inicio" && <section className="panel welcome-panel"><h1>MiniMall</h1><p>Entre ou crie sua conta para acessar seu perfil.</p>{!user && <button className="primary" onClick={() => go("login")}>Entrar</button>}</section>}
+        {route === "inicio" && <Home products={products} stores={approved} onProduct={onProduct} onExplore={(category) => { setFilters({ ...emptyFilters, category: category || "" }); go("explorar"); }} onStores={() => go("lojas")} storeCard={storeCard} />}
+        {route === "explorar" && <Catalog data={data} filters={filters} setFilters={setFilters} onProduct={onProduct} onStore={onStore} />}
+        {route === "lojas" && <>
+          <div className="page-title"><h1>Lojas</h1></div>
+          {approved.length ? <div className="store-grid all-stores">{approved.map(storeCard)}</div> : <Empty title="Nenhuma loja encontrada" text="Ainda não há lojas com produtos publicados na vitrine." action={<button className="primary" onClick={() => go("explorar")}>Ver vitrine</button>} />}
+        </>}
+        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} />}
+        {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
         {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} />}
-        {route === "admin" && <Empty title="Administração indisponível" text="O painel administrativo ainda não está disponível nesta versão do frontend." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
         {route === "lojista" && <StoreSettings user={user} go={go} notify={setToast} onStoreCreated={async () => {
           const session = await getCurrentSession();
           await syncSession(session);
         }} />}
         {route === "lojista/produtos" && <ProductList go={go} notify={setToast} />}
         {productFormRoute && <ProductForm key={route} productId={route.startsWith("lojista/produtos/editar/") ? route.split("/")[3] : null} go={go} notify={setToast} />}
-        {!known && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
+        {route === "admin" && <Admin notify={setToast} onCategoriesChange={() => setCatalogRevision((r) => r + 1)} />}
+        {!known && !catalogLoading && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
       </>}
     </main>
     <footer><a className="brand" href="#inicio">mini<span>mall</span><i /></a></footer>

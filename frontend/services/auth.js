@@ -2,22 +2,31 @@ import { getSupabaseClient, isSupabaseConfigured } from "./supabase.js";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://127.0.0.1:8000";
 
-export function getAuthenticatedRoute(role) {
+export function normalizeRole(role) {
+  if (role === "admin" || role === "administrador") return "admin";
   if (role === "consumidor") return "consumidor";
   if (role === "lojista") return "lojista";
-  if (role === "admin") return "admin";
+  return null;
+}
+
+export function getAuthenticatedRoute(role) {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === "consumidor") return "consumidor";
+  if (normalizedRole === "lojista") return "lojista";
+  if (normalizedRole === "admin") return "admin";
   return "inicio";
 }
 
 export function canAccessRoute(route, user) {
+  const role = normalizeRole(user?.role);
   if (route === "consumidor" || route.startsWith("consumidor/")) {
-    return user?.role === "consumidor";
+    return role === "consumidor";
   }
   if (route === "lojista" || route.startsWith("lojista/")) {
-    return user?.role === "lojista";
+    return role === "lojista";
   }
   if (route === "admin" || route.startsWith("admin/")) {
-    return user?.role === "admin";
+    return role === "admin";
   }
   return true;
 }
@@ -78,5 +87,5 @@ export async function getAuthenticatedProfile(token, fetchImpl = globalThis.fetc
   const response = await fetchImpl(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.detail || `Não foi possível carregar o perfil: HTTP ${response.status}`);
-  return body;
+  return { ...body, role: normalizeRole(body.role) };
 }
