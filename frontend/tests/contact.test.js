@@ -77,3 +77,11 @@ test("componente reutiliza o serviço e expõe um link externo acessível", asyn
   assert.match(source, />Falar no WhatsApp</);
   assert.match(source, /aria-hidden="true"/);
 });
+
+test("ProductDetail repassa os dados reais do produto e da loja ao botão", async () => {
+  const source = await readFile(new URL("../views/ProductDetail.jsx", import.meta.url), "utf8");
+  assert.match(source, /import WhatsAppContactButton/);
+  assert.match(source, /whatsapp=\{s\?\.whatsapp \|\| p\.whatsapp\}/);
+  assert.match(source, /productName=\{p\.name\}/);
+  assert.match(source, /price=\{price\(p\)\}/);
+});

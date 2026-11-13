@@ -84,13 +84,24 @@ test("vitrine pública consulta /produtos sem autenticação e monta lojas e cat
 
 test("normalização de produto bloqueia URLs inseguras e preserva dados da API", () => {
   const item = normalizePublicProduct(
-    rawProduct({ foto_principal_url: "javascript:alert(1)" }),
+    rawProduct({
+      foto_principal_url: "javascript:alert(1)",
+      whatsapp_loja: "(89) 99999-8888",
+    }),
   );
   assert.equal(item.image, "");
   assert.equal(item.name, "Camisa de linho");
   assert.equal(item.storeName, "Dona Flor");
   assert.equal(item.category, "Vestuário");
   assert.equal(item.price, 159.9);
+  assert.equal(item.whatsapp, "(89) 99999-8888");
+});
+
+test("catálogo associa à loja o WhatsApp real recebido com o produto", () => {
+  const catalog = buildPublicCatalog([
+    rawProduct({ whatsapp_loja: "89999998888" }),
+  ]);
+  assert.equal(catalog.stores[0].whatsapp, "89999998888");
 });
 
 test("searchProducts filtra e ordena produtos da vitrine", () => {
