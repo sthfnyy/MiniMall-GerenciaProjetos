@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, House, LayoutGrid, LogOut, Search, Store, User, X } from "lucide-react";
+import { ArrowRight, House, LayoutGrid, LogOut, Search, ShieldCheck, Store, User, X } from "lucide-react";
 import Home from "./views/Home";
 import Catalog from "./views/Catalog";
 import StorePage from "./views/StorePage";
 import ProductDetail from "./views/ProductDetail";
 import AuthPage from "./views/AuthPage";
+import Admin from "./views/admin/Admin";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
 import StoreSettings from "./views/merchant/StoreSettings";
 import ProductList from "./views/merchant/ProductList";
@@ -135,7 +136,7 @@ export default function App() {
 
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "conta", "lojista", "lojista/produtos", "lojista/produtos/novo"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "conta", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
     Boolean(store);
@@ -148,6 +149,9 @@ export default function App() {
   if (user) {
     nav.push(["conta", "Minha conta", User]);
     nav.push(["lojista", user.role === "lojista" ? "Minha loja" : "Cadastrar loja", Store]);
+    if (user.role === "admin" || user.role === "administrador") {
+      nav.push(["admin", "Administração", ShieldCheck]);
+    }
   }
 
   return <>
@@ -199,6 +203,7 @@ export default function App() {
         }} />}
         {route === "lojista/produtos" && <ProductList go={go} notify={setToast} />}
         {productFormRoute && <ProductForm key={route} productId={route.startsWith("lojista/produtos/editar/") ? route.split("/")[3] : null} go={go} notify={setToast} />}
+        {route === "admin" && <Admin notify={setToast} onCategoriesChange={() => setCatalogRevision((r) => r + 1)} />}
         {!known && !catalogLoading && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
       </>}
     </main>

@@ -3,10 +3,14 @@ import { getSupabaseClient, isSupabaseConfigured } from "./supabase.js";
 const API_URL = import.meta.env?.VITE_API_URL || "http://127.0.0.1:8000";
 
 export function getAuthenticatedRoute(role) {
+  if (role === "admin" || role === "administrador") return "admin";
   return role === "lojista" ? "lojista" : "conta";
 }
 
 export function canAccessRoute(route, user) {
+  if (route === "admin" || route.startsWith("admin/")) {
+    return user?.role === "admin" || user?.role === "administrador";
+  }
   if (route === "conta") return Boolean(user);
   if (route === "lojista") return Boolean(user);
   if (route.startsWith("lojista/")) return user?.role === "lojista";
