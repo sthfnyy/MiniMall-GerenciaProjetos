@@ -39,7 +39,7 @@ async def buscar_produtos(
         )
 
     consulta = (
-        select(Produto, Loja.nome_loja, Categoria.nome)
+        select(Produto, Loja.nome_loja, Categoria.nome, Loja.whatsapp)
         .join(Loja, Loja.id == Produto.loja_id)
         .join(Categoria, Categoria.id == Produto.categoria_id)
         .where(
@@ -75,6 +75,7 @@ async def buscar_produtos(
             **ProdutoOut.model_validate(produto).model_dump(),
             nome_loja=nome_loja,
             nome_categoria=nome_categoria,
+            whatsapp=whatsapp,
         )
-        for produto, nome_loja, nome_categoria in linhas
+        for produto, nome_loja, nome_categoria, whatsapp in linhas
     ]

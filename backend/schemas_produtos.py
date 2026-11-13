@@ -70,3 +70,4 @@ class ProdutoOut(BaseModel):
 class ProdutoVitrineOut(ProdutoOut):
     nome_loja: str
     nome_categoria: str
+    whatsapp: str
