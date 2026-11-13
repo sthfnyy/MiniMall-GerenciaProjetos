@@ -13,7 +13,8 @@ def criar_banco_sqlite():
     )
     with engine.begin() as conexao:
         conexao.exec_driver_sql("""CREATE TABLE lojas (
-            id CHAR(32) PRIMARY KEY, nome_loja TEXT, status TEXT
+            id CHAR(32) PRIMARY KEY, nome_loja TEXT, status TEXT,
+            whatsapp TEXT NOT NULL DEFAULT ''
         )""")
         conexao.exec_driver_sql("""CREATE TABLE categorias (
             id CHAR(32) PRIMARY KEY, nome TEXT, criado_em DATETIME
@@ -27,12 +28,13 @@ def criar_banco_sqlite():
     return engine
 
 
-def inserir_loja(engine, nome="Loja Teste", status="aprovada"):
+def inserir_loja(engine, nome="Loja Teste", status="aprovada", whatsapp=""):
     identificador = uuid.uuid4()
     with engine.begin() as conexao:
         conexao.execute(text(
-            "INSERT INTO lojas (id, nome_loja, status) VALUES (:id, :nome, :status)"
-        ), {"id": identificador.hex, "nome": nome, "status": status})
+            "INSERT INTO lojas (id, nome_loja, status, whatsapp) "
+            "VALUES (:id, :nome, :status, :whatsapp)"
+        ), {"id": identificador.hex, "nome": nome, "status": status, "whatsapp": whatsapp})
     return identificador
 
 

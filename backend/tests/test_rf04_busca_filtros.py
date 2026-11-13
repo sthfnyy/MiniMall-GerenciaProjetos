@@ -18,8 +18,8 @@ from backend.tests.sqlite_produtos_fixture import (
 class RF04BuscaFiltrosTestCase(unittest.TestCase):
     def setUp(self):
         self.engine = criar_banco_sqlite()
-        self.loja_a = inserir_loja(self.engine, "Loja A")
-        self.loja_b = inserir_loja(self.engine, "Loja B")
+        self.loja_a = inserir_loja(self.engine, "Loja A", whatsapp="5589999990001")
+        self.loja_b = inserir_loja(self.engine, "Loja B", whatsapp="5589999990002")
         self.loja_pendente = inserir_loja(self.engine, "Loja Pendente", status="pendente")
         self.cat_vestuario = inserir_categoria(self.engine, "Vestuário")
         self.cat_calcados = inserir_categoria(self.engine, "Calçados")
@@ -72,6 +72,45 @@ class RF04BuscaFiltrosTestCase(unittest.TestCase):
             self.assertIn(campo, produto)
         self.assertEqual(produto["nome_loja"], "Loja A")
         self.assertEqual(produto["nome_categoria"], "Vestuário")
+
+    def test_contrato_da_vitrine_apenas_acrescenta_whatsapp(self):
+        produto = self.client.get("/produtos?q=camiseta").json()[0]
+        self.assertEqual(
+            set(produto),
+            {
+                "id", "loja_id", "categoria_id", "titulo", "descricao", "preco_base",
+                "foto_principal_url", "ativo", "criado_em", "atualizado_em",
+                "nome_loja", "nome_categoria", "whatsapp",
+            },
+        )
+
+    def test_produto_publico_retorna_whatsapp_da_loja(self):
+        produto = self.client.get("/produtos?q=camiseta").json()[0]
+        self.assertEqual(produto["loja_id"], str(self.loja_a))
+        self.assertEqual(produto["whatsapp"], "5589999990001")
+
+    def test_produtos_de_lojas_diferentes_retornam_seus_numeros(self):
+        produtos = self.client.get("/produtos").json()
+        esperado = {str(self.loja_a): "5589999990001", str(self.loja_b): "5589999990002"}
+        self.assertEqual(len(produtos), 4)
+        for produto in produtos:
+            with self.subTest(titulo=produto["titulo"]):
+                self.assertEqual(produto["whatsapp"], esperado[produto["loja_id"]])
+
+    def test_loja_sem_whatsapp_retorna_campo_vazio(self):
+        loja_sem_contato = inserir_loja(self.engine, "Loja Sem Contato")
+        inserir_produto(self.engine, loja_sem_contato, self.cat_vestuario, "Boné Sem Contato", "30.00")
+        resposta = self.client.get(f"/produtos?loja_id={loja_sem_contato}")
+        self.assertEqual(resposta.status_code, 200, resposta.text)
+        self.assertEqual(self.titulos(resposta), ["Boné Sem Contato"])
+        self.assertEqual(resposta.json()[0]["whatsapp"], "")
+
+    def test_filtros_preservam_whatsapp_da_loja(self):
+        resposta = self.client.get(
+            f"/produtos?categoria_id={self.cat_calcados}&preco_max=100"
+        )
+        self.assertEqual(self.titulos(resposta), ["Sandália"])
+        self.assertEqual(resposta.json()[0]["whatsapp"], "5589999990002")
 
     def test_pesquisa_por_nome(self):
         self.assertEqual(self.titulos(self.client.get("/produtos?q=casual")), ["Tênis Casual", "Vestido Casual"])
