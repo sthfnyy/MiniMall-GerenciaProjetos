@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   canAccessRoute,
+  getAuthenticatedRoute,
   getAuthenticatedProfile,
   getCurrentSession,
   observeAuthChanges,
@@ -85,11 +86,34 @@ test("sessão pode ser restaurada e observada", async () => {
 });
 
 test("role controla as rotas protegidas", () => {
-  assert.equal(canAccessRoute("conta", null), false);
-  assert.equal(canAccessRoute("conta", { role: "consumidor" }), true);
-  assert.equal(canAccessRoute("lojista", { role: "consumidor" }), true);
+  assert.equal(canAccessRoute("consumidor", null), false);
+  assert.equal(canAccessRoute("consumidor", { role: "consumidor" }), true);
+  assert.equal(canAccessRoute("consumidor", { role: "lojista" }), false);
+  assert.equal(canAccessRoute("lojista", { role: "consumidor" }), false);
   assert.equal(canAccessRoute("lojista", { role: "lojista" }), true);
   assert.equal(canAccessRoute("lojista/produtos", { role: "consumidor" }), false);
+  assert.equal(canAccessRoute("lojista/produtos", { role: "lojista" }), true);
+  assert.equal(canAccessRoute("lojista/produtos/novo", { role: "lojista" }), true);
+  assert.equal(canAccessRoute("lojista/produtos/editar/123", { role: "lojista" }), true);
+  assert.equal(canAccessRoute("lojista", { role: "admin" }), false);
+  assert.equal(canAccessRoute("lojista/produtos", { role: "admin" }), false);
+  assert.equal(canAccessRoute("admin", { role: "admin" }), true);
+  assert.equal(canAccessRoute("admin", { role: "consumidor" }), false);
+  assert.equal(canAccessRoute("admin", { role: "lojista" }), false);
+});
+
+test("cada role autenticada recebe sua própria rota inicial", () => {
+  assert.equal(getAuthenticatedRoute("consumidor"), "consumidor");
+  assert.equal(getAuthenticatedRoute("lojista"), "lojista");
+  assert.equal(getAuthenticatedRoute("admin"), "admin");
+  assert.equal(getAuthenticatedRoute("role-desconhecida"), "inicio");
+});
+
+test("navegação não oferece cadastro de loja para consumidor ou admin", async () => {
+  const source = await readFile(new URL("../App.jsx", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /Cadastrar loja/);
+  assert.match(source, /user\?\.role === "consumidor"/);
+  assert.match(source, /user\?\.role === "lojista"/);
 });
 
 test("logout encerra a sessão no provedor", async () => {

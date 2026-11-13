@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Image as ImageIcon,
 } from "lucide-react";
+import WhatsAppContactButton from "../components/WhatsAppContactButton";
 import { money, price } from "../services/catalog";
 
 export default function ProductDetail({
@@ -45,6 +46,11 @@ export default function ProductDetail({
             {p.sale > 0 && <s>{money(p.price)}</s>}
           </div>
           <p>{p.description || "Nenhuma descrição informada."}</p>
+          <WhatsAppContactButton
+            whatsapp={s?.whatsapp || p.whatsapp}
+            productName={p.name}
+            price={price(p)}
+          />
         </div>
       </div>
       <div className="panel store-summary">

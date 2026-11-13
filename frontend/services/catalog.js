@@ -51,6 +51,7 @@ export function normalizePublicProduct(product = {}, categories = []) {
     "";
   const basePrice = Number(product.preco_base ?? product.price ?? 0);
   const safeImage = sanitizeImageUrl(product.foto_principal_url ?? product.image ?? "");
+  const whatsapp = product.whatsapp_loja || product.whatsapp || "";
 
   return {
     id: String(product.id),
@@ -58,6 +59,7 @@ export function normalizePublicProduct(product = {}, categories = []) {
     store: storeId,
     nome_loja: product.nome_loja || product.storeName || "",
     storeName: product.nome_loja || product.storeName || "",
+    whatsapp,
     categoria_id: categoryId,
     categoryId,
     nome_categoria: categoryName,
@@ -157,6 +159,7 @@ export function buildPublicCatalog(rawProducts = []) {
       storeMap.set(product.store, {
         id: product.store,
         name: product.storeName || "Loja parceira",
+        whatsapp: product.whatsapp || "",
         category: product.category || "",
         description: "",
         address: "",

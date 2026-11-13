@@ -136,7 +136,7 @@ export default function App() {
 
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "conta", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
     Boolean(store);
@@ -146,13 +146,9 @@ export default function App() {
     ["explorar", "Produtos", LayoutGrid],
     ["lojas", "Lojas", Store],
   ];
-  if (user) {
-    nav.push(["conta", "Minha conta", User]);
-    nav.push(["lojista", user.role === "lojista" ? "Minha loja" : "Cadastrar loja", Store]);
-    if (user.role === "admin" || user.role === "administrador") {
-      nav.push(["admin", "Administração", ShieldCheck]);
-    }
-  }
+  if (user?.role === "consumidor") nav.push(["consumidor", "Minha conta", User]);
+  if (user?.role === "lojista") nav.push(["lojista", "Minha loja", Store]);
+  if (user?.role === "admin") nav.push(["admin", "Administração", ShieldCheck]);
 
   return <>
     <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -196,7 +192,7 @@ export default function App() {
         {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} />}
         {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
-        {route === "conta" && <ConsumerProfile user={user} onLogout={logout} />}
+        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} />}
         {route === "lojista" && <StoreSettings user={user} go={go} notify={setToast} onStoreCreated={async () => {
           const session = await getCurrentSession();
           await syncSession(session);

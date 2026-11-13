@@ -2,18 +2,32 @@ import { getSupabaseClient, isSupabaseConfigured } from "./supabase.js";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://127.0.0.1:8000";
 
-export function getAuthenticatedRoute(role) {
+export function normalizeRole(role) {
   if (role === "admin" || role === "administrador") return "admin";
-  return role === "lojista" ? "lojista" : "conta";
+  if (role === "consumidor") return "consumidor";
+  if (role === "lojista") return "lojista";
+  return null;
+}
+
+export function getAuthenticatedRoute(role) {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === "consumidor") return "consumidor";
+  if (normalizedRole === "lojista") return "lojista";
+  if (normalizedRole === "admin") return "admin";
+  return "inicio";
 }
 
 export function canAccessRoute(route, user) {
-  if (route === "admin" || route.startsWith("admin/")) {
-    return user?.role === "admin" || user?.role === "administrador";
+  const role = normalizeRole(user?.role);
+  if (route === "consumidor" || route.startsWith("consumidor/")) {
+    return role === "consumidor";
   }
-  if (route === "conta") return Boolean(user);
-  if (route === "lojista") return Boolean(user);
-  if (route.startsWith("lojista/")) return user?.role === "lojista";
+  if (route === "lojista" || route.startsWith("lojista/")) {
+    return role === "lojista";
+  }
+  if (route === "admin" || route.startsWith("admin/")) {
+    return role === "admin";
+  }
   return true;
 }
 
@@ -73,5 +87,5 @@ export async function getAuthenticatedProfile(token, fetchImpl = globalThis.fetc
   const response = await fetchImpl(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.detail || `Não foi possível carregar o perfil: HTTP ${response.status}`);
-  return body;
+  return { ...body, role: normalizeRole(body.role) };
 }
