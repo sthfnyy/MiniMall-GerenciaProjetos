@@ -12,6 +12,9 @@ export default function StorePage({
   go,
   user,
   onReview,
+  isFavorite,
+  onToggleFavorite,
+  isFavoriteBusy,
   fetchReviewsFn = listStoreReviews,
 }) {
   const identity = storeIdentity(s.id);
@@ -93,6 +96,9 @@ export default function StorePage({
               store={s}
               onProduct={onProduct}
               onStore={onStore}
+              isFavorite={isFavorite ? isFavorite(p.id) : false}
+              onToggleFavorite={onToggleFavorite}
+              favoriteBusy={isFavoriteBusy ? isFavoriteBusy(p.id) : false}
             />
           ))}
         </div>
