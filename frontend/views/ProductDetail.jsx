@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   Image as ImageIcon,
+  Heart,
 } from "lucide-react";
 import WhatsAppContactButton from "../components/WhatsAppContactButton";
 import { money, price } from "../services/catalog";
@@ -12,6 +13,9 @@ export default function ProductDetail({
   product: p,
   store: s,
   go,
+  isFavorite = false,
+  onToggleFavorite,
+  favoriteBusy = false,
 }) {
   const storeName = s?.name || p.storeName || "Loja parceira";
   const storeId = s?.id || p.store;
@@ -32,6 +36,26 @@ export default function ProductDetail({
             </div>
           )}
           {p.sale > 0 && <span className="sale-tag">Oferta</span>}
+          {onToggleFavorite && (
+            <button
+              className={`favorite ${isFavorite ? "is-favorite" : ""}`}
+              type="button"
+              aria-label={
+                isFavorite
+                  ? `Remover ${p.name} dos favoritos`
+                  : `Adicionar ${p.name} aos favoritos`
+              }
+              aria-pressed={isFavorite}
+              aria-busy={favoriteBusy}
+              disabled={favoriteBusy}
+              onClick={() => onToggleFavorite(p)}
+            >
+              <Heart
+                size={20}
+                fill={isFavorite ? "currentColor" : "none"}
+              />
+            </button>
+          )}
         </div>
         <div className="detail-copy">
           <span className="eyebrow muted">{p.category}</span>

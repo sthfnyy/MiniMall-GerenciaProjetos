@@ -10,6 +10,9 @@ export default function Catalog({
   setFilters,
   onProduct,
   onStore,
+  isFavorite,
+  onToggleFavorite,
+  isFavoriteBusy,
 }) {
   const [open, setOpen] = useState(false);
   const [list, setList] = useState([]);
@@ -237,6 +240,9 @@ export default function Catalog({
               }
               onProduct={onProduct}
               onStore={onStore}
+              isFavorite={isFavorite ? isFavorite(p.id) : false}
+              onToggleFavorite={onToggleFavorite}
+              favoriteBusy={isFavoriteBusy ? isFavoriteBusy(p.id) : false}
             />
           ))}
         </div>

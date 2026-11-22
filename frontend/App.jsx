@@ -7,6 +7,7 @@ import ProductDetail from "./views/ProductDetail";
 import AuthPage from "./views/AuthPage";
 import Admin from "./views/admin/Admin";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
+import ConsumerFavorites from "./views/consumer/ConsumerFavorites";
 import ConsumerReviews from "./views/consumer/ConsumerReviews";
 import ConsumerPoints from "./views/consumer/ConsumerPoints";
 import ReviewForm from "./views/consumer/ReviewForm";
@@ -18,6 +19,12 @@ import StoreCard from "./components/StoreCard";
 import { Empty } from "./components/ui";
 import { emptyCatalog, publicCatalog } from "./services/catalog";
 import { publishConsumerReview } from "./services/reviews";
+import {
+  applyFavoriteState,
+  getFavoriteProductIds,
+  listConsumerFavorites,
+  toggleConsumerFavorite,
+} from "./services/favorites";
 import {
   canAccessRoute,
   getAuthenticatedProfile,
@@ -47,6 +54,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState("");
   const [toast, setToast] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [favoritePending, setFavoritePending] = useState([]);
   const authRevision = useRef(0);
   const go = (path) => { location.hash = path; };
 
@@ -110,6 +119,23 @@ export default function App() {
     return () => controller.abort();
   }, [catalogRevision]);
 
+  // Favoritos vêm sempre da API: recarregados a cada sessão de consumidor
+  // (inclusive após F5) e descartados ao sair ou trocar de perfil.
+  useEffect(() => {
+    let active = true;
+    setFavoriteIds([]);
+    setFavoritePending([]);
+    if (user?.role !== "consumidor") return undefined;
+    listConsumerFavorites()
+      .then((favorites) => {
+        if (active) setFavoriteIds(getFavoriteProductIds(favorites));
+      })
+      .catch((error) => {
+        if (active) setToast(error.message);
+      });
+    return () => { active = false; };
+  }, [user?.id, user?.role]);
+
   useEffect(() => {
     if (!toast) return undefined;
     const id = setTimeout(() => setToast(""), 4500);
@@ -132,6 +158,35 @@ export default function App() {
     go("consumidor/avaliacoes");
   }
 
+  const isFavorite = (productId) => favoriteIds.includes(String(productId));
+  const isFavoriteBusy = (productId) => favoritePending.includes(String(productId));
+
+  async function toggleFavorite(favoriteProduct) {
+    if (!user) {
+      setToast("Entre como consumidor para adicionar favoritos.");
+      go("login");
+      return;
+    }
+    if (user.role !== "consumidor") {
+      setToast("Somente consumidores podem adicionar favoritos.");
+      return;
+    }
+    const id = String(favoriteProduct.id);
+    if (favoritePending.includes(id)) return;
+    setFavoritePending((ids) => [...ids, id]);
+    try {
+      const favorite = await toggleConsumerFavorite(favoriteProduct.id, isFavorite(id));
+      setFavoriteIds((ids) => applyFavoriteState(ids, id, favorite));
+      setToast(favorite
+        ? `"${favoriteProduct.name}" adicionado aos favoritos.`
+        : `"${favoriteProduct.name}" removido dos favoritos.`);
+    } catch (error) {
+      setToast(error.message);
+    } finally {
+      setFavoritePending((ids) => ids.filter((item) => item !== id));
+    }
+  }
+
   async function logout() {
     try {
       await signOut();
@@ -151,9 +206,14 @@ export default function App() {
   const onStore = (id) => go(`loja/${id}`);
   const storeCard = (s) => <StoreCard key={s.id} store={s} data={data} onStore={onStore} />;
 
+  // Lojista e admin não recebem as ações privadas de favorito do consumidor.
+  const favoriteProps = user && user.role !== "consumidor"
+    ? {}
+    : { isFavorite, onToggleFavorite: toggleFavorite, isFavoriteBusy };
+
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/pontos", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/favoritos", "consumidor/pontos", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
     Boolean(store) ||
@@ -225,15 +285,16 @@ export default function App() {
       {authError && <div className="error" role="alert">{authError}</div>}
       {restricted ? authLoading ? <p role="status">Verificando acesso…</p> : <Empty title="Acesso restrito" text="Entre com uma conta autorizada para acessar esta página." action={<button className="primary" onClick={() => go("login")}>Entrar</button>} /> : <>
         {route === "inicio" && <Home products={products} stores={approved} onProduct={onProduct} onExplore={(category) => { setFilters({ ...emptyFilters, category: category || "" }); go("explorar"); }} onStores={() => go("lojas")} storeCard={storeCard} />}
-        {route === "explorar" && <Catalog data={data} filters={filters} setFilters={setFilters} onProduct={onProduct} onStore={onStore} />}
+        {route === "explorar" && <Catalog data={data} filters={filters} setFilters={setFilters} onProduct={onProduct} onStore={onStore} {...favoriteProps} />}
         {route === "lojas" && <>
           <div className="page-title"><h1>Lojas</h1></div>
           {approved.length ? <div className="store-grid all-stores">{approved.map(storeCard)}</div> : <Empty title="Nenhuma loja encontrada" text="Ainda não há lojas com produtos publicados na vitrine." action={<button className="primary" onClick={() => go("explorar")}>Ver vitrine</button>} />}
         </>}
-        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} onReview={(selectedStore) => go(`consumidor/avaliar/${selectedStore.id}`)} />}
-        {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} />}
+        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} onReview={(selectedStore) => go(`consumidor/avaliar/${selectedStore.id}`)} {...favoriteProps} />}
+        {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} {...(favoriteProps.onToggleFavorite ? { isFavorite: isFavorite(product.id), onToggleFavorite: toggleFavorite, favoriteBusy: isFavoriteBusy(product.id) } : {})} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
-        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onPoints={() => go("consumidor/pontos")} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onFavorites={() => go("consumidor/favoritos")} onPoints={() => go("consumidor/pontos")} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor/favoritos" && <ConsumerFavorites go={go} onFavoriteRemoved={(productId) => setFavoriteIds((ids) => applyFavoriteState(ids, productId, false))} />}
         {route === "consumidor/pontos" && <ConsumerPoints data={data} go={go} />}
         {route === "consumidor/avaliacoes" && <ConsumerReviews data={data} go={go} />}
         {reviewStore && <ReviewForm key={reviewStore.id} store={reviewStore} onCancel={() => go(`loja/${reviewStore.id}`)} onPublish={publishReview} />}

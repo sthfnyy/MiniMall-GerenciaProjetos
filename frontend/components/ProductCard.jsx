@@ -1,5 +1,5 @@
 import React from "react";
-import { Store, ArrowUpRight, Image as ImageIcon } from "lucide-react";
+import { Store, ArrowUpRight, Heart, Image as ImageIcon } from "lucide-react";
 import { money, price } from "../services/catalog";
 
 export default function ProductCard({
@@ -7,6 +7,9 @@ export default function ProductCard({
   store,
   onProduct,
   onStore,
+  isFavorite = false,
+  onToggleFavorite,
+  favoriteBusy = false,
 }) {
   const storeName = store?.name || p.storeName || "Ver loja";
   const storeId = store?.id || p.store;
@@ -33,6 +36,33 @@ export default function ProductCard({
           <span className="sale-tag">
             −{Math.round((1 - p.sale / p.price) * 100)}%
           </span>
+        )}
+
+        {onToggleFavorite && (
+          <button
+            className={`favorite ${isFavorite ? "is-favorite" : ""}`}
+            type="button"
+            aria-label={
+              isFavorite
+                ? `Remover ${p.name} dos favoritos`
+                : `Adicionar ${p.name} aos favoritos`
+            }
+            aria-pressed={isFavorite}
+            aria-busy={favoriteBusy}
+            disabled={favoriteBusy}
+            onClick={() =>
+              onToggleFavorite(p)
+            }
+          >
+            <Heart
+              size={20}
+              fill={
+                isFavorite
+                  ? "currentColor"
+                  : "none"
+              }
+            />
+          </button>
         )}
       </div>
 
