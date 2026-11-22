@@ -7,12 +7,16 @@ import ProductDetail from "./views/ProductDetail";
 import AuthPage from "./views/AuthPage";
 import Admin from "./views/admin/Admin";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
+import ConsumerReviews from "./views/consumer/ConsumerReviews";
+import ReviewForm from "./views/consumer/ReviewForm";
 import StoreSettings from "./views/merchant/StoreSettings";
 import ProductList from "./views/merchant/ProductList";
 import ProductForm from "./views/merchant/ProductForm";
+import StoreReviews from "./views/merchant/StoreReviews";
 import StoreCard from "./components/StoreCard";
 import { Empty } from "./components/ui";
 import { emptyCatalog, publicCatalog } from "./services/catalog";
+import { publishConsumerReview } from "./services/reviews";
 import {
   canAccessRoute,
   getAuthenticatedProfile,
@@ -116,6 +120,17 @@ export default function App() {
     if (profile) { go(getAuthenticatedRoute(profile.role)); setToast("Você entrou na conta."); }
   }
 
+  async function publishReview(values) {
+    const result = await publishConsumerReview({ ...values, user, store: reviewStore });
+    if (result.failedPhotos.length) {
+      const reason = result.failedPhotos[0].error.message;
+      setToast(`Avaliação publicada, mas ${result.failedPhotos.length} foto(s) não foram enviadas: ${reason} Você pode reenviá-las em Minhas avaliações.`);
+    } else {
+      setToast("Avaliação publicada com sucesso.");
+    }
+    go("consumidor/avaliacoes");
+  }
+
   async function logout() {
     try {
       await signOut();
@@ -129,6 +144,7 @@ export default function App() {
   const products = (data.products || []).filter((p) => !p.deleted && p.active !== false);
   const product = products.find((p) => route === `produto/${p.id}`);
   const store = approved.find((s) => route === `loja/${s.id}`);
+  const reviewStore = approved.find((s) => route === `consumidor/avaliar/${s.id}`);
 
   const onProduct = (p) => go(`produto/${p.id}`);
   const onStore = (id) => go(`loja/${id}`);
@@ -136,10 +152,11 @@ export default function App() {
 
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
-    Boolean(store);
+    Boolean(store) ||
+    Boolean(reviewStore);
   const restricted = !canAccessRoute(route, user);
   const nav = [
     ["inicio", "Início", House],
@@ -212,15 +229,18 @@ export default function App() {
           <div className="page-title"><h1>Lojas</h1></div>
           {approved.length ? <div className="store-grid all-stores">{approved.map(storeCard)}</div> : <Empty title="Nenhuma loja encontrada" text="Ainda não há lojas com produtos publicados na vitrine." action={<button className="primary" onClick={() => go("explorar")}>Ver vitrine</button>} />}
         </>}
-        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} />}
+        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} onReview={(selectedStore) => go(`consumidor/avaliar/${selectedStore.id}`)} />}
         {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
-        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} />}
+        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor/avaliacoes" && <ConsumerReviews data={data} go={go} />}
+        {reviewStore && <ReviewForm key={reviewStore.id} store={reviewStore} onCancel={() => go(`loja/${reviewStore.id}`)} onPublish={publishReview} />}
         {route === "lojista" && <StoreSettings user={user} go={go} notify={setToast} onStoreCreated={async () => {
           const session = await getCurrentSession();
           await syncSession(session);
         }} />}
         {route === "lojista/produtos" && <ProductList go={go} notify={setToast} />}
+        {route === "lojista/avaliacoes" && <StoreReviews go={go} />}
         {productFormRoute && <ProductForm key={route} productId={route.startsWith("lojista/produtos/editar/") ? route.split("/")[3] : null} go={go} notify={setToast} />}
         {route === "admin" && <Admin notify={setToast} onCategoriesChange={() => setCatalogRevision((r) => r + 1)} />}
         {!known && !catalogLoading && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
