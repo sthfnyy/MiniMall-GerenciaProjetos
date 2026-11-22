@@ -29,7 +29,7 @@ export function friendlyFavoriteError(error) {
     return withStatus("Produto inválido para a lista de favoritos.", 422);
   }
   if (status && status >= 500) {
-    return withStatus("Não foi possível atualizar seus favoritos no momento. Tente novamente mais tarde.", status);
+    return withStatus("Não foi possível acessar seus favoritos no momento. Tente novamente mais tarde.", status);
   }
 
   return error instanceof Error

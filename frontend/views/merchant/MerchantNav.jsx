@@ -9,7 +9,7 @@ export default function MerchantNav({ current = "configuracao", go }) {
   ];
 
   return (
-    <nav className="merchant-navigation" aria-label="Painel do lojista">
+    <nav className="admin-navigation merchant-navigation" aria-label="Painel do lojista">
       {tabs.map(({ id, label, path, icon: Icon }) => (
         <button
           key={id}

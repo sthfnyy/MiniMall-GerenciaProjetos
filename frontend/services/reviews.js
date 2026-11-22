@@ -60,6 +60,9 @@ function friendlyPhotoError(error) {
   if (status === 415 || status === 422) {
     return withStatus("O arquivo enviado não é uma imagem válida.", status);
   }
+  if (status && status >= 500) {
+    return withStatus("Não foi possível processar a foto no momento. Tente novamente mais tarde.", status);
+  }
 
   return error instanceof Error ? error : new Error(message);
 }
@@ -83,6 +86,12 @@ export function friendlyReviewError(error) {
     return withStatus(
       "Dados da avaliação inválidos. Confira a nota (1 a 5) e o comentário.",
       422,
+    );
+  }
+  if (status && status >= 500) {
+    return withStatus(
+      "Não foi possível acessar as avaliações no momento. Tente novamente mais tarde.",
+      status,
     );
   }
 

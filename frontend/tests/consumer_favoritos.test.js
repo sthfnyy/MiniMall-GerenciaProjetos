@@ -177,7 +177,7 @@ test("erro ao favoritar não marca o produto como persistido", async () => {
       });
       ids = applyFavoriteState(ids, PRODUCT_ID, favorite);
     })(),
-    /Não foi possível atualizar seus favoritos no momento/,
+    /Não foi possível acessar seus favoritos no momento/,
   );
   assert.deepEqual(ids, []);
 });
