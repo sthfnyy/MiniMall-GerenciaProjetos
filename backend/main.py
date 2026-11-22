@@ -11,6 +11,8 @@ from .controllers import (
     auth_profile,
     lojista_produtos,
     publico_produtos,
+    consumer_avaliacoes,
+    consumer_pontos,
 )
 
 app = FastAPI(title="MiniMall API - Gerência de Projetos")
@@ -29,6 +31,8 @@ app.include_router(admin_moderacao.router)
 app.include_router(auth_profile.router)
 app.include_router(lojista_produtos.router)
 app.include_router(publico_produtos.router)
+app.include_router(consumer_avaliacoes.router)
+app.include_router(consumer_pontos.router)
 
 
 @app.get("/health")
