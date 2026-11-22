@@ -344,7 +344,8 @@ main {
   margin-bottom: 22px;
 }
 .primary,
-.outline {
+.outline,
+.secondary {
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -363,12 +364,14 @@ main {
 .primary:hover {
   background: #183bc1;
 }
-.outline {
+.outline,
+.secondary {
   border: 1px solid #dfe3eb;
   background: white;
   color: #434b5c;
 }
-.outline:hover {
+.outline:hover,
+.secondary:hover {
   background: #f6f8fc;
 }
 .primary svg:last-child {

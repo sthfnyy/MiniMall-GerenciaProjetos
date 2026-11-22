@@ -437,7 +437,8 @@ main {
   line-height: 1.2;
 }
 .primary,
-.outline {
+.outline,
+.secondary {
   border-radius: 50px;
   min-height: 46px;
   font-size: 14px;
@@ -451,13 +452,15 @@ main {
 .primary:hover {
   background: #475a2a;
 }
-.outline {
+.outline,
+.secondary {
   border-color: #b9c1ad;
   background: transparent;
   color: var(--ink);
 }
 .outline:hover,
-.outline.pressed {
+.outline.pressed,
+.secondary:hover {
   background: #edf2e1;
   border-color: #819464;
 }
@@ -889,6 +892,12 @@ footer > .text-button {
 }
 .review-photo {
   border-radius: 4px;
+}
+/* Fotos da avaliação na página da loja ficam lado a lado, não empilhadas. */
+.review > .review-photo {
+  display: inline-block;
+  margin-right: 10px;
+  vertical-align: top;
 }
 .review-photo-list {
   display: grid;
@@ -2435,6 +2444,20 @@ td {
    FAVORITOS
    ========================================================= */
 
+/* Card de favorito usa <img> direto em .product-visual (sem .image-link):
+   ocupa a área inteira como nos demais cards e limita a descrição. */
+.product-visual > img {
+  width: 100%;
+  height: 100%;
+}
+
+.product-card .product-info > p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .consumer-favorites-header {
   display: flex;
   align-items: flex-end;
@@ -2568,6 +2591,14 @@ td {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+/* Histórico de pontos: descrição e loja quebram linha para que a coluna
+   Data continue visível sem rolagem horizontal nas resoluções desktop. */
+.consumer-page .table-wrap td:nth-child(3),
+.consumer-page .table-wrap td:nth-child(4) {
+  white-space: normal;
+  min-width: 160px;
 }
 
 .consumer-points-content > span {
@@ -2880,6 +2911,12 @@ td {
   font-size: 14px;
   color: var(--ink);
   outline: none;
+}
+
+/* O campo remove o outline; o foco por teclado é indicado no container. */
+.merchant-search-box:focus-within {
+  outline: 2px solid #596c25;
+  outline-offset: 4px;
 }
 
 .merchant-category-select {

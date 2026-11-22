@@ -316,6 +316,11 @@ header {
   font-size: 29px;
   letter-spacing: -1px;
   margin-top: 8px;
+  /* Nomes de loja longos quebram centralizados dentro do painel. */
+  max-width: 100%;
+  padding: 0 24px;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 .identity-passo .store-wordmark,
 .identity-passo.store-cover h1 {

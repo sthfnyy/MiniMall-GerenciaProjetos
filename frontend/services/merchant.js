@@ -203,6 +203,9 @@ function friendlyMerchantReviewsError(error) {
   if (error?.status === 404) {
     return new Error("Loja não encontrada ou o serviço de avaliações não está disponível no momento.");
   }
+  if (error?.status >= 500) {
+    return new Error("Não foi possível carregar as avaliações da loja no momento. Tente novamente mais tarde.");
+  }
   return error instanceof Error ? error : new Error("Erro ao carregar as avaliações da loja.");
 }
 
