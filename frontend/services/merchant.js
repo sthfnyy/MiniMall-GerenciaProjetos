@@ -173,3 +173,72 @@ export async function deleteStoreProduct(productId, request = apiRequest) {
 export async function fetchProductCategories() {
   throw new Error("O backend ainda não disponibiliza categorias para o painel do lojista.");
 }
+
+export function normalizeReviewFromApi(review) {
+  if (!review) return null;
+
+  return {
+    id: review.id,
+    storeId: review.loja_id,
+    rating: Number(review.nota) || 0,
+    comment: review.comentario || "",
+    photo: review.foto_url || "",
+    date: review.criado_em,
+    consumerName: review.consumidor_nome || "Consumidor",
+    photos: Array.isArray(review.fotos) && review.fotos.length > 0
+      ? review.fotos.map((f) => ({
+          id: f.id,
+          url: f.url,
+          date: f.criado_em,
+        }))
+      : review.foto_url
+        ? [{ id: "main-photo", url: review.foto_url, date: review.criado_em }]
+        : [],
+  };
+}
+
+function friendlyMerchantReviewsError(error) {
+  if (error?.status === 401) return new Error("Sua sessão expirou. Entre novamente como lojista.");
+  if (error?.status === 403) return new Error("Somente lojistas podem consultar as avaliações da loja.");
+  if (error?.status === 404) {
+    return new Error("Loja não encontrada ou o serviço de avaliações não está disponível no momento.");
+  }
+  return error instanceof Error ? error : new Error("Erro ao carregar as avaliações da loja.");
+}
+
+export async function fetchMerchantReviews(request = apiRequest) {
+  let response;
+  try {
+    response = await request("/lojista/avaliacoes");
+  } catch (error) {
+    throw friendlyMerchantReviewsError(error);
+  }
+  if (!Array.isArray(response)) return [];
+  return response.map(normalizeReviewFromApi);
+}
+
+export function calculateReviewsSummary(reviews = []) {
+  const total = reviews.length;
+  if (!total) {
+    return {
+      total: 0,
+      average: "0.0",
+      distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    };
+  }
+
+  const sum = reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+  const average = (sum / total).toFixed(1);
+
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const r of reviews) {
+    const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 0)));
+    distribution[star] = (distribution[star] || 0) + 1;
+  }
+
+  return {
+    total,
+    average,
+    distribution,
+  };
+}

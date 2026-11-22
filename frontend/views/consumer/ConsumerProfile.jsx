@@ -1,9 +1,9 @@
 import React from "react";
-import { User, Mail, ShieldCheck, LogOut } from "lucide-react";
+import { User, Mail, ShieldCheck, LogOut, Star } from "lucide-react";
 
 const roleLabel = { consumidor: "Consumidor", lojista: "Lojista" };
 
-export default function ConsumerProfile({ user, onLogout }) {
+export default function ConsumerProfile({ user, onLogout, onReviews }) {
   return (
     <section className="consumer-page">
       <div className="page-title">
@@ -24,6 +24,7 @@ export default function ConsumerProfile({ user, onLogout }) {
           <div className="consumer-info-item"><ShieldCheck size={19} /><div><span>Status</span><strong>Ativo</strong></div></div>
         </div>
         <div className="consumer-profile-actions">
+          {onReviews && <button className="secondary" type="button" onClick={onReviews}><Star size={17} />Minhas avaliações</button>}
           <button className="secondary" type="button" onClick={onLogout}><LogOut size={17} />Sair da conta</button>
         </div>
       </div>
