@@ -8,6 +8,7 @@ import AuthPage from "./views/AuthPage";
 import Admin from "./views/admin/Admin";
 import ConsumerProfile from "./views/consumer/ConsumerProfile";
 import ConsumerReviews from "./views/consumer/ConsumerReviews";
+import ConsumerPoints from "./views/consumer/ConsumerPoints";
 import ReviewForm from "./views/consumer/ReviewForm";
 import StoreSettings from "./views/merchant/StoreSettings";
 import ProductList from "./views/merchant/ProductList";
@@ -152,7 +153,7 @@ export default function App() {
 
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/pontos", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
     Boolean(store) ||
@@ -232,7 +233,8 @@ export default function App() {
         {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} onReview={(selectedStore) => go(`consumidor/avaliar/${selectedStore.id}`)} />}
         {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
-        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onPoints={() => go("consumidor/pontos")} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor/pontos" && <ConsumerPoints data={data} go={go} />}
         {route === "consumidor/avaliacoes" && <ConsumerReviews data={data} go={go} />}
         {reviewStore && <ReviewForm key={reviewStore.id} store={reviewStore} onCancel={() => go(`loja/${reviewStore.id}`)} onPublish={publishReview} />}
         {route === "lojista" && <StoreSettings user={user} go={go} notify={setToast} onStoreCreated={async () => {
