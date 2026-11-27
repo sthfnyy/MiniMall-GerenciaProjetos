@@ -1,10 +1,11 @@
 import React from "react";
-import { Store, Package, Star } from "lucide-react";
+import { Store, Package, ShoppingBag, Star } from "lucide-react";
 
 export default function MerchantNav({ current = "configuracao", go }) {
   const tabs = [
     { id: "configuracao", label: "Configuração da Loja", path: "lojista", icon: Store },
     { id: "produtos", label: "Catálogo de Produtos", path: "lojista/produtos", icon: Package },
+    { id: "compras", label: "Confirmações de compra", path: "lojista/compras", icon: ShoppingBag },
     { id: "avaliacoes", label: "Avaliações", path: "lojista/avaliacoes", icon: Star },
   ];
 
@@ -18,11 +19,10 @@ export default function MerchantNav({ current = "configuracao", go }) {
           className={current === id ? "active" : ""}
           onClick={() => go(path)}
         >
-          <Icon size={16} />
+          <Icon size={16} aria-hidden="true" />
           {label}
         </button>
       ))}
     </nav>
   );
 }
-

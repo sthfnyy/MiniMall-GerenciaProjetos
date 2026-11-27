@@ -34,7 +34,7 @@ test("erros 5xx de avaliações não exibem a mensagem crua do servidor", async 
   );
 });
 
-test("navegação do lojista usa as classes de abas do PDSI-I", async () => {
+test("navegação do lojista usa as classes de abas", async () => {
   const nav = await source("../views/merchant/MerchantNav.jsx");
   assert.match(nav, /className="admin-navigation merchant-navigation"/);
 });

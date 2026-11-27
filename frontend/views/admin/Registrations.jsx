@@ -230,9 +230,8 @@ export default function Registrations({ notify, onCategoriesChange }) {
       {deleting && (
         <Modal
           title="Excluir categoria?"
-          onClose={() => {
-            if (!categoryDeleting) setDeleting(null);
-          }}
+          onClose={() => setDeleting(null)}
+          busy={categoryDeleting}
         >
           <p>{deleting.nome}</p>
           <p>Categorias com produtos vinculados não podem ser excluídas.</p>

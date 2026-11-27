@@ -70,7 +70,9 @@ export function normalizePublicProduct(product = {}, categories = []) {
     descricao: product.descricao || product.description || "",
     price: basePrice,
     preco_base: basePrice,
-    sale: Number(product.sale || 0),
+    // Preço promocional: exibido em destaque com o regular riscado.
+    sale: Number(product.preco_promocional ?? product.sale ?? 0) || 0,
+    preco_promocional: product.preco_promocional == null ? null : Number(product.preco_promocional),
     image: safeImage,
     foto_principal_url: safeImage || null,
     variations: Array.isArray(product.variations) ? product.variations : [],
@@ -142,7 +144,61 @@ export function catalogQuery(filters = {}, categories = []) {
   return params;
 }
 
-export function buildPublicCatalog(rawProducts = []) {
+function hoursText(value) {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return "";
+  return value.descricao || value.texto || Object.entries(value).map(([day, hours]) => `${day}: ${hours}`).join(" · ");
+}
+
+export function storeAddress(store = {}) {
+  const street = [store.endereco_logradouro, store.endereco_numero].filter(Boolean).join(", ");
+  const city = store.endereco_cidade && store.endereco_uf
+    ? `${store.endereco_cidade} – ${store.endereco_uf}`
+    : store.endereco_cidade || store.endereco_uf || "";
+  return [street, store.endereco_bairro, city, store.endereco_cep].filter(Boolean).join(", ");
+}
+
+export function safeExternalUrl(value, allowedHosts = []) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const handle = raw.replace(/^@/, "");
+  const url = /^https?:\/\//i.test(raw) ? raw : allowedHosts[0] && /^[\w.]+$/.test(handle) ? `https://${allowedHosts[0]}/${handle}` : "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return "";
+    if (allowedHosts.length && !allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`))) return "";
+    return parsed.href;
+  } catch {
+    return "";
+  }
+}
+
+// Loja pública vinda de GET /lojas (somente dados comerciais).
+export function normalizePublicStore(store = {}, products = []) {
+  const id = String(store.id);
+  const categories = products.filter((product) => product.store === id).map((product) => product.category).filter(Boolean);
+  const mainCategory = categories.sort((a, b) => categories.filter((c) => c === b).length - categories.filter((c) => c === a).length)[0] || "";
+  const address = storeAddress(store);
+  return {
+    id,
+    name: store.nome_loja || "Loja parceira",
+    description: store.descricao || "",
+    address,
+    hours: hoursText(store.horario_funcionamento),
+    whatsapp: store.whatsapp || "",
+    instagram: safeExternalUrl(store.instagram, ["instagram.com"]),
+    facebook: safeExternalUrl(store.facebook, ["facebook.com"]),
+    logo_url: sanitizeImageUrl(store.logo_url),
+    mapsUrl: address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "",
+    rating: store.media_avaliacoes == null ? null : Number(store.media_avaliacoes),
+    reviewCount: Number(store.total_avaliacoes || 0),
+    productCount: Number(store.total_produtos || 0),
+    category: mainCategory,
+    status: "aprovada",
+  };
+}
+
+export function buildPublicCatalog(rawProducts = [], rawStores = null) {
   const products = rawProducts.map((item) => normalizePublicProduct(item));
   const categoryMap = new Map();
   const storeMap = new Map();
@@ -171,7 +227,11 @@ export function buildPublicCatalog(rawProducts = []) {
 
   const categoryRecords = [...categoryMap.values()];
   const categories = [...new Set(categoryRecords.map((c) => c.nome))];
-  const stores = [...storeMap.values()];
+  // Com GET /lojas, todas as lojas aprovadas aparecem (inclusive sem produtos);
+  // sem ele, as lojas são deduzidas dos produtos publicados.
+  const stores = Array.isArray(rawStores)
+    ? rawStores.map((store) => normalizePublicStore(store, products))
+    : [...storeMap.values()];
 
   return {
     ...emptyCatalog,
@@ -205,13 +265,24 @@ export function createPublicCatalogService(request = apiRequest) {
     return sortCatalogProducts(list, filters.sort);
   }
 
+  async function stores(signal) {
+    try {
+      const response = await request("/lojas", { authenticated: false, signal });
+      return Array.isArray(response) ? response : null;
+    } catch (error) {
+      if (error?.name === "AbortError") throw error;
+      return null;
+    }
+  }
+
   async function load(signal) {
-    const allProducts = await products({}, [], signal);
-    return buildPublicCatalog(allProducts);
+    const [allProducts, allStores] = await Promise.all([products({}, [], signal), stores(signal)]);
+    return buildPublicCatalog(allProducts, allStores);
   }
 
   return {
     products,
+    stores,
     load,
   };
 }

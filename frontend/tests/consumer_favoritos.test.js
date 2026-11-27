@@ -66,7 +66,7 @@ function fakeFavoritesBackend(initial = []) {
 }
 
 // ---------------------------------------------------------------------------
-// Testes migrados do PDSI-I (tests/frontend.test.js), sem os de dados seed
+// Testes de favoritos (sem dados seed)
 // ---------------------------------------------------------------------------
 
 test("produto real preserva UUID no payload de favoritos", async () => {
@@ -289,9 +289,9 @@ test("ConsumerFavorites remove da lista só depois que a API confirma", async ()
   assert.match(view, /!loading && !loadFailed &&/);
 });
 
-test("perfil restaura o acesso Meus favoritos do PDSI-I", async () => {
+test("perfil restaura o acesso Meus favoritos", async () => {
   const profile = await source("../views/consumer/ConsumerProfile.jsx");
-  assert.match(profile, /onClick=\{onFavorites\}><Heart size=\{17\} \/>Meus favoritos/);
+  assert.match(profile, /onClick=\{onFavorites\}><Heart size=\{17\} aria-hidden="true" \/>Meus favoritos/);
   assert.ok(profile.indexOf("Meus favoritos") < profile.indexOf("Meus pontos"));
 });
 

@@ -92,7 +92,8 @@ test("fetchMerchantReviews traduz 404 e 403 da API em mensagens amigáveis", asy
     throw error;
   };
 
-  await assert.rejects(fetchMerchantReviews(failWith(404)), /serviço de avaliações não está disponível/);
+  // Com GET /lojista/avaliacoes disponível, 404 significa lojista sem loja cadastrada.
+  await assert.rejects(fetchMerchantReviews(failWith(404)), /Cadastre sua loja/);
   await assert.rejects(fetchMerchantReviews(failWith(403)), /Somente lojistas/);
 });
 

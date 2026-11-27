@@ -1,31 +1,42 @@
-
 import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
 
-import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import require_consumer
-from ..config.config import settings
 from ..config.database import get_db
 from ..models import (
     Avaliacao,
     AvaliacaoFoto,
+    IntencaoCompra,
     Loja,
     PontosTransacao,
     Profile,
+    StatusIntencaoCompra,
+    StatusLoja,
     TipoTransacaoPontos,
 )
 from ..schemas import (
     ConsumerAvaliacaoCreate,
     ConsumerAvaliacaoFotoOut,
     ConsumerAvaliacaoOut,
+    ConsumerAvaliacaoUpdate,
+)
+from ..services.avaliacoes import (
+    PONTOS_AVALIACAO,
+    PONTOS_FOTO,
+    descricao_foto,
+    estornar_pontos_da_avaliacao,
+    estornar_pontos_da_foto,
+    fotos_por_avaliacao,
+    limpar_storage,
+    remover_fotos_da_avaliacao,
+    upload_foto,
 )
 
 router = APIRouter(
@@ -35,9 +46,6 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 
-BUCKET = "fotos-avaliacoes"
-PONTOS_AVALIACAO = 10
-PONTOS_FOTO = 5
 MAX_FOTOS = 3
 MAX_BYTES = 5 * 1024 * 1024
 
@@ -47,103 +55,66 @@ TIPOS = {
     "image/webp": ("webp", (".webp",)),
 }
 
+MENSAGEM_SEM_COMPRA = (
+    "Para avaliar esta loja, sua compra precisa ser confirmada pelo lojista. "
+    "Solicite a confirmação na página do produto que você comprou."
+)
 
-def _descricao_foto(foto_id: uuid.UUID) -> str:
-    return f"RF08:foto:{foto_id}"
 
-
-def _storage_config() -> tuple[str, str]:
-    url = (settings.supabase_url or "").rstrip("/")
-    chave = settings.supabase_service_role_key or ""
-
-    if not url or not chave:
-        raise HTTPException(
-            503, "Storage do Supabase não configurado"
+async def possui_compra_confirmada(
+    db: AsyncSession, consumidor_id: uuid.UUID, loja_id: uuid.UUID
+) -> bool:
+    """Regra de negócio: só avalia quem teve a compra confirmada pela loja."""
+    resultado = await db.execute(
+        select(IntencaoCompra.id)
+        .where(
+            IntencaoCompra.consumidor_id == consumidor_id,
+            IntencaoCompra.loja_id == loja_id,
+            IntencaoCompra.status == StatusIntencaoCompra.compra_confirmada,
         )
+        .limit(1)
+    )
+    return resultado.scalar_one_or_none() is not None
 
-    return url, chave
 
-
-async def _upload_foto(
-    caminho: str,
-    dados: bytes,
-    mime: str,
-) -> str:
-    url, chave = _storage_config()
-
-    headers = {
-        "apikey": chave,
-        "Authorization": f"Bearer {chave}",
-        "Content-Type": mime,
-        "x-upsert": "false",
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resposta = await client.post(
-                f"{url}/storage/v1/object/"
-                f"{BUCKET}/{quote(caminho, safe='/')}",
-                headers=headers,
-                content=dados,
-            )
-            resposta.raise_for_status()
-
-    except httpx.HTTPError as exc:
-        raise HTTPException(
-            502, "Falha ao armazenar foto no Supabase"
-        ) from exc
-
-    return (
-        f"{url}/storage/v1/object/public/"
-        f"{BUCKET}/{quote(caminho, safe='/')}"
+def _montar_saida(avaliacao: Avaliacao, fotos: list[AvaliacaoFoto], loja_nome: str | None = None):
+    return ConsumerAvaliacaoOut(
+        id=avaliacao.id,
+        loja_id=avaliacao.loja_id,
+        nota=avaliacao.nota,
+        comentario=avaliacao.comentario,
+        foto_url=avaliacao.foto_url or "",
+        criado_em=avaliacao.criado_em,
+        loja_nome=loja_nome,
+        fotos=[ConsumerAvaliacaoFotoOut.model_validate(foto) for foto in fotos],
     )
 
 
-async def _remover_storage(public_url: str) -> None:
-    url, chave = _storage_config()
-    parsed = urlparse(public_url)
-    prefixo = f"/storage/v1/object/public/{BUCKET}/"
+# ----------------------------------------
+# Listar as avaliações do consumidor
+# ----------------------------------------
 
-    if (
-        f"{parsed.scheme}://{parsed.netloc}" != url
-        or not parsed.path.startswith(prefixo)
-    ):
-        logger.warning(
-            "URL de foto não pertence ao bucket configurado"
+@router.get("", response_model=list[ConsumerAvaliacaoOut])
+async def listar_avaliacoes(
+    profile: Profile = Depends(require_consumer),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        resultado = await db.execute(
+            select(Avaliacao, Loja.nome_loja)
+            .join(Loja, Loja.id == Avaliacao.loja_id)
+            .where(Avaliacao.usuario_id == profile.id)
+            .order_by(Avaliacao.criado_em.desc())
         )
-        return
+        linhas = resultado.all()
+        fotos = await fotos_por_avaliacao(db, [avaliacao.id for avaliacao, _ in linhas])
+    except SQLAlchemyError as exc:
+        raise HTTPException(500, "Não foi possível consultar as avaliações") from exc
 
-    caminho = unquote(parsed.path[len(prefixo):])
-
-    if not caminho or any(
-        parte in ("", ".", "..")
-        for parte in caminho.split("/")
-    ):
-        return
-
-    headers = {
-        "apikey": chave,
-        "Authorization": f"Bearer {chave}",
-    }
-
-    async with httpx.AsyncClient(timeout=30) as client:
-        resposta = await client.delete(
-            f"{url}/storage/v1/object/"
-            f"{BUCKET}/{quote(caminho, safe='/')}",
-            headers=headers,
-        )
-        resposta.raise_for_status()
-
-
-async def _limpar_storage(urls: list[str]) -> None:
-    for url in urls:
-        try:
-            await _remover_storage(url)
-        except (HTTPException, httpx.HTTPError):
-            logger.exception(
-                "Falha ao remover arquivo do Storage: %s",
-                url,
-            )
+    return [
+        _montar_saida(avaliacao, fotos.get(avaliacao.id, []), nome_loja)
+        for avaliacao, nome_loja in linhas
+    ]
 
 
 # ----------------------------------------
@@ -169,10 +140,11 @@ async def criar_avaliacao(
             )
         ).scalar_one_or_none()
 
-        if loja is None:
-            raise HTTPException(
-                404, "Loja não encontrada"
-            )
+        if loja is None or loja.status != StatusLoja.aprovada:
+            raise HTTPException(404, "Loja não encontrada")
+
+        if not await possui_compra_confirmada(db, profile.id, payload.loja_id):
+            raise HTTPException(403, MENSAGEM_SEM_COMPRA)
 
         anterior = (
             await db.execute(
@@ -187,7 +159,7 @@ async def criar_avaliacao(
 
         if anterior is not None:
             raise HTTPException(
-                409, "Você já avaliou esta loja"
+                409, "Você já avaliou esta loja. Edite sua avaliação em Minhas avaliações."
             )
 
         avaliacao = Avaliacao(
@@ -205,16 +177,14 @@ async def criar_avaliacao(
         # Executa o INSERT e eventuais triggers do banco.
         await db.flush()
 
-        # Evita duplicar os 10 pontos caso o banco
-        # já tenha um trigger de pontuação.
+        # Evita duplicar os 10 pontos: o banco real possui o trigger
+        # trg_creditar_pontos_avaliacao, que já registra o crédito.
         ja_creditado = (
             await db.execute(
                 select(PontosTransacao.id)
                 .where(
-                    PontosTransacao.avaliacao_id
-                    == avaliacao.id,
-                    PontosTransacao.tipo
-                    == TipoTransacaoPontos.credito,
+                    PontosTransacao.avaliacao_id == avaliacao.id,
+                    PontosTransacao.tipo == TipoTransacaoPontos.credito,
                 )
                 .limit(1)
             )
@@ -235,7 +205,7 @@ async def criar_avaliacao(
             )
 
         await db.commit()
-        return avaliacao
+        return _montar_saida(avaliacao, [], loja.nome_loja)
 
     except HTTPException:
         await db.rollback()
@@ -246,6 +216,53 @@ async def criar_avaliacao(
         raise HTTPException(
             500, "Não foi possível criar a avaliação"
         ) from exc
+
+
+# ----------------------------------------
+# Editar nota/comentário.
+# Não gera novos pontos (RN34/RN36).
+# ----------------------------------------
+
+@router.patch("/{avaliacao_id}", response_model=ConsumerAvaliacaoOut)
+async def atualizar_avaliacao(
+    avaliacao_id: uuid.UUID,
+    payload: ConsumerAvaliacaoUpdate,
+    profile: Profile = Depends(require_consumer),
+    db: AsyncSession = Depends(get_db),
+):
+    alteracoes = payload.model_dump(exclude_unset=True)
+    if "comentario" in alteracoes and alteracoes["comentario"] is not None:
+        alteracoes["comentario"] = alteracoes["comentario"].strip() or None
+
+    try:
+        avaliacao = (
+            await db.execute(
+                select(Avaliacao).where(
+                    Avaliacao.id == avaliacao_id,
+                    Avaliacao.usuario_id == profile.id,
+                )
+            )
+        ).scalar_one_or_none()
+
+        if avaliacao is None:
+            raise HTTPException(404, "Avaliação não encontrada")
+
+        for campo, valor in alteracoes.items():
+            setattr(avaliacao, campo, valor)
+
+        await db.commit()
+        fotos = await fotos_por_avaliacao(db, [avaliacao.id])
+        nome_loja = (
+            await db.execute(select(Loja.nome_loja).where(Loja.id == avaliacao.loja_id))
+        ).scalar_one_or_none()
+    except HTTPException:
+        await db.rollback()
+        raise
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        raise HTTPException(500, "Não foi possível atualizar a avaliação") from exc
+
+    return _montar_saida(avaliacao, fotos.get(avaliacao.id, []), nome_loja)
 
 
 # ----------------------------------------
@@ -355,7 +372,7 @@ async def adicionar_foto(
             f"{foto_id}.{extensao}"
         )
 
-        url = await _upload_foto(
+        url = await upload_foto(
             caminho, dados, mime
         )
 
@@ -378,7 +395,7 @@ async def adicionar_foto(
                     tipo=TipoTransacaoPontos.credito,
                     quantidade=PONTOS_FOTO,
                     avaliacao_id=None,
-                    descricao=_descricao_foto(foto_id),
+                    descricao=descricao_foto(foto_id),
                     criado_em=datetime.now(UTC),
                 )
             )
@@ -388,7 +405,7 @@ async def adicionar_foto(
 
         except SQLAlchemyError:
             await db.rollback()
-            await _limpar_storage([url])
+            await limpar_storage([url])
             raise
 
         return foto
@@ -447,16 +464,7 @@ async def remover_foto(
         url = foto.url
 
         # Remove apenas os pontos dessa foto.
-        await db.execute(
-            delete(PontosTransacao).where(
-                PontosTransacao.usuario_id == profile.id,
-                PontosTransacao.loja_id == loja_id,
-                PontosTransacao.tipo
-                == TipoTransacaoPontos.credito,
-                PontosTransacao.descricao
-                == _descricao_foto(foto_id),
-            )
-        )
+        await estornar_pontos_da_foto(db, foto_id, profile.id, loja_id)
 
         await db.delete(foto)
         await db.commit()
@@ -471,7 +479,7 @@ async def remover_foto(
             500, "Não foi possível remover a foto"
         ) from exc
 
-    await _limpar_storage([url])
+    await limpar_storage([url])
 
 
 # ----------------------------------------
@@ -504,42 +512,11 @@ async def remover_avaliacao(
                 404, "Avaliação não encontrada"
             )
 
-        fotos = (
-            await db.execute(
-                select(AvaliacaoFoto).where(
-                    AvaliacaoFoto.avaliacao_id
-                    == avaliacao_id
-                )
-            )
-        ).scalars().all()
-
+        fotos = (await fotos_por_avaliacao(db, [avaliacao_id])).get(avaliacao_id, [])
         urls = [foto.url for foto in fotos]
 
-        creditos_fotos = [
-            _descricao_foto(foto.id)
-            for foto in fotos
-        ]
-
-        condicoes = [
-            PontosTransacao.avaliacao_id
-            == avaliacao_id
-        ]
-
-        if creditos_fotos:
-            condicoes.append(
-                PontosTransacao.descricao.in_(
-                    creditos_fotos
-                )
-            )
-
-        await db.execute(
-            delete(PontosTransacao).where(
-                PontosTransacao.usuario_id == profile.id,
-                PontosTransacao.tipo
-                == TipoTransacaoPontos.credito,
-                or_(*condicoes),
-            )
-        )
+        await estornar_pontos_da_avaliacao(db, avaliacao_id, profile.id, fotos)
+        await remover_fotos_da_avaliacao(db, avaliacao_id)
 
         await db.delete(avaliacao)
         await db.commit()
@@ -554,4 +531,4 @@ async def remover_avaliacao(
             500, "Não foi possível remover a avaliação"
         ) from exc
 
-    await _limpar_storage(urls)
+    await limpar_storage(urls)

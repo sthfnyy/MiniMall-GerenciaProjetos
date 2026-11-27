@@ -173,7 +173,7 @@ class LojistaLojaTestCase(unittest.TestCase):
 
 
     def test_cadastrar_loja_sucesso(self):
-        profile = criar_profile(UserRole.consumidor)
+        profile = criar_profile(UserRole.lojista)
         session = FakeSession(results=[None])
         self.autenticar(profile=profile, session=session)
 
@@ -195,9 +195,34 @@ class LojistaLojaTestCase(unittest.TestCase):
         self.assertEqual(dados["nome_loja"], "Nova Loja")
         self.assertEqual(dados["endereco_uf"], "PI")
         self.assertEqual(dados["status"], "pendente")
-        self.assertEqual(profile.role, UserRole.lojista)
+        self.assertEqual(dados["lojista_id"], str(profile.id))
         self.assertTrue(session.committed)
         self.assertEqual(len(session.records), 1)
+
+    def test_consumidor_nao_pode_cadastrar_loja(self):
+        session = FakeSession(results=[None])
+        self.autenticar(profile=criar_profile(UserRole.consumidor), session=session)
+        response = self.client.post("/lojista/loja", json={
+            "nome_loja": "Loja Indevida",
+            "endereco_cidade": "Picos",
+            "endereco_uf": "PI",
+            "whatsapp": "89999990000",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(session.committed)
+        self.assertEqual(session.records, [])
+
+    def test_admin_nao_pode_cadastrar_loja(self):
+        session = FakeSession(results=[None])
+        self.autenticar(profile=criar_profile(UserRole.admin), session=session)
+        response = self.client.post("/lojista/loja", json={
+            "nome_loja": "Loja Admin",
+            "endereco_cidade": "Picos",
+            "endereco_uf": "PI",
+            "whatsapp": "89999990000",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(session.committed)
 
     def test_cadastrar_loja_ja_existente_retorna_400(self):
         profile = criar_profile(UserRole.lojista)

@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
 from ..models import Categoria, Loja, Produto
-from ..schemas_produtos import ProdutoCreateIn, ProdutoOut, ProdutoUpdateIn
+from ..schemas import CategoriaOut
+from ..schemas_produtos import ProdutoCreateIn, ProdutoOut, ProdutoUpdateIn, validar_preco_promocional
 from .lojista_loja import get_lojista_loja
 
 router = APIRouter(prefix="/lojista/produtos", tags=["lojista - produtos"])
@@ -89,6 +90,21 @@ async def listar_meus_produtos(
         raise HTTPException(status_code=500, detail="Falha ao listar produtos") from exc
 
 
+# Declarada ANTES de "/{produto_id}" para não ser
+# interpretada como identificador de produto.
+@router.get("/categorias", response_model=list[CategoriaOut])
+async def listar_categorias_lojista(
+    _loja: Loja = Depends(get_lojista_loja),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista as categorias globais que o lojista pode vincular aos produtos."""
+    try:
+        resultado = await db.execute(select(Categoria).order_by(Categoria.nome))
+        return resultado.scalars().all()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail="Falha ao listar categorias") from exc
+
+
 @router.get("/{produto_id}", response_model=ProdutoOut)
 async def consultar_meu_produto(produto: Produto = Depends(buscar_produto_da_loja)):
     return produto
@@ -105,6 +121,12 @@ async def editar_produto(
         await validar_categoria(db, alteracoes["categoria_id"])
     if not alteracoes:
         return produto
+    preco_final = alteracoes.get("preco_base", produto.preco_base)
+    promocao_final = alteracoes["preco_promocional"] if "preco_promocional" in alteracoes else produto.preco_promocional
+    try:
+        validar_preco_promocional(preco_final, promocao_final)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     for campo, valor in alteracoes.items():
         setattr(produto, campo, valor)
     produto.atualizado_em = datetime.now(UTC)

@@ -116,6 +116,7 @@ export function normalizeProductFromApi(product) {
     loja_id: String(product.loja_id),
     categoria_id: String(product.categoria_id),
     preco_base: Number(product.preco_base),
+    preco_promocional: product.preco_promocional == null ? null : Number(product.preco_promocional),
     ativo: Boolean(product.ativo),
   };
 }
@@ -130,11 +131,20 @@ export function productPayload(values = {}) {
   if (values.preco_base === "" || !Number.isFinite(preco) || preco < 0 || preco > 99999999.99) throw new Error("Informe um preço válido.");
   if (Math.abs(preco * 100 - Math.round(preco * 100)) > 0.0001) throw new Error("O preço deve ter no máximo duas casas decimais.");
   if (foto && !/^https?:\/\//i.test(foto)) throw new Error("Informe uma URL de imagem com http ou https.");
+  const promoRaw = values.preco_promocional == null ? "" : String(values.preco_promocional).trim();
+  let promo = null;
+  if (promoRaw !== "") {
+    promo = Number(promoRaw);
+    if (!Number.isFinite(promo) || promo <= 0) throw new Error("Informe um preço promocional maior que zero.");
+    if (promo >= preco) throw new Error("O preço promocional deve ser menor que o preço de venda.");
+    if (Math.abs(promo * 100 - Math.round(promo * 100)) > 0.0001) throw new Error("O preço promocional deve ter no máximo duas casas decimais.");
+  }
   return {
     categoria_id: categoriaId,
     titulo,
     descricao: values.descricao?.trim() || null,
     preco_base: preco.toFixed(2),
+    preco_promocional: promo == null ? null : promo.toFixed(2),
     foto_principal_url: foto || null,
     ativo: Boolean(values.ativo),
   };
@@ -170,8 +180,25 @@ export async function deleteStoreProduct(productId, request = apiRequest) {
   return true;
 }
 
-export async function fetchProductCategories() {
-  throw new Error("O backend ainda não disponibiliza categorias para o painel do lojista.");
+// GET /lojista/produtos/categorias (categorias globais ativas).
+export async function fetchProductCategories(request = apiRequest) {
+  try {
+    const categories = await request("/lojista/produtos/categorias");
+    return (Array.isArray(categories) ? categories : [])
+      .map((category) => ({ id: String(category.id), nome: category.nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  } catch (error) {
+    if (error?.status === 404) {
+      const notFound = new Error("Cadastre sua loja antes de cadastrar produtos.");
+      notFound.status = 404;
+      throw notFound;
+    }
+    throw new Error(error?.message || "Não foi possível carregar as categorias. Tente novamente.");
+  }
+}
+
+export function categoryNameMap(categories = []) {
+  return new Map(categories.map((category) => [String(category.id), category.nome]));
 }
 
 export function normalizeReviewFromApi(review) {
@@ -201,7 +228,7 @@ function friendlyMerchantReviewsError(error) {
   if (error?.status === 401) return new Error("Sua sessão expirou. Entre novamente como lojista.");
   if (error?.status === 403) return new Error("Somente lojistas podem consultar as avaliações da loja.");
   if (error?.status === 404) {
-    return new Error("Loja não encontrada ou o serviço de avaliações não está disponível no momento.");
+    return new Error("Cadastre sua loja para começar a receber avaliações.");
   }
   if (error?.status >= 500) {
     return new Error("Não foi possível carregar as avaliações da loja no momento. Tente novamente mais tarde.");

@@ -44,96 +44,70 @@ Durante o desenvolvimento, algumas atividades de Front-end precisaram ser redist
 
 ### Autenticação e perfis
 
-O sistema possui três perfis principais:
+O sistema possui três perfis:
 
-- **Consumidor**
-- **Lojista**
-- **Administrador**
+- **Consumidor** e **Lojista** — escolhidos pela própria pessoa no cadastro público;
+- **Administrador** — nunca pelo cadastro público; promoção manual e restrita no banco (ver `backend/database/README.md`).
 
-O acesso às funcionalidades é controlado de acordo com o perfil autenticado.
+O acesso é controlado no Front-end (rotas por perfil) **e** no Back-end (`require_consumer`, `require_lojista`, `require_admin`).
 
 ---
 
 ### 🏪 Lojista
 
-O lojista pode:
-
-- cadastrar e editar informações do estabelecimento;
-- informar endereço e dados de contato;
-- configurar WhatsApp;
-- cadastrar produtos;
-- editar produtos;
-- remover produtos;
-- visualizar seus produtos;
-- acessar as avaliações relacionadas ao estabelecimento.
+- cadastra e edita a loja (endereço, horário, WhatsApp, Instagram, Facebook, logo);
+- acompanha o status: **Pendente → Aprovada / Rejeitada** (com motivo) e solicita nova análise;
+- cadastra, edita, ativa/desativa e exclui produtos, com categoria, foto (URL) e **preço promocional**;
+- **confirma ou rejeita as compras** informadas pelos consumidores;
+- consulta as avaliações recebidas (média, distribuição de notas, comentários e fotos).
 
 ---
 
-### 🛒 Vitrine pública
+### 🛒 Vitrine pública (sem login)
 
-Visitantes e consumidores podem:
+- produtos de lojas aprovadas, busca por **título e descrição**, filtros (categoria, loja, preço) e ordenação;
+- página da loja com descrição, endereço, horário, contatos, link para o mapa, **média e avaliações públicas**;
+- contato pelo WhatsApp com mensagem contendo nome, preço e **link do produto**.
 
-- visualizar produtos;
-- pesquisar produtos;
-- utilizar filtros;
-- acessar páginas de estabelecimentos;
-- visualizar detalhes dos produtos;
-- consultar informações da loja;
-- iniciar contato com o lojista pelo WhatsApp.
+---
+
+### 🧾 Confirmação de compra
+
+Para avaliar uma loja, o consumidor precisa ter uma compra **confirmada pelo lojista**:
+
+1. o consumidor usa **“Já comprei este produto”** (página do produto) ou **“Solicitar confirmação”** (página da loja) → solicitação **Pendente**;
+2. o lojista, em **Confirmações de compra**, escolhe **Confirmar compra** ou **Não reconheço**;
+3. confirmada → a avaliação é liberada. A regra é validada no Back-end: `POST /consumidor/avaliacoes` responde 403 sem compra confirmada.
 
 ---
 
 ### ⭐ Avaliações
 
-O Front-end permite:
-
-- atribuir nota ao estabelecimento;
-- adicionar comentário;
-- selecionar imagens;
-- visualizar preview das imagens antes do envio;
-- consultar avaliações realizadas;
-- visualizar avaliações na página do estabelecimento.
-
-> A persistência completa das avaliações e fotos depende dos respectivos endpoints de Back-end.
+- nota (1 a 5), comentário e até 3 fotos (JPEG, PNG ou WebP, 5 MB) com pré-visualização;
+- uma avaliação por loja; o consumidor lista, edita, exclui e gerencia fotos em **Minhas avaliações**;
+- avaliações públicas na página da loja (nome do consumidor abreviado) e visão completa para o lojista.
 
 ---
 
 ### 🪙 Pontos
 
-O consumidor possui uma interface para:
-
-- visualizar saldo total;
-- consultar saldo por estabelecimento;
-- acompanhar histórico de movimentações;
-- visualizar créditos e resgates.
-
-> A interface está concluída, porém a consulta e atribuição real dos pontos depende da API correspondente no Back-end.
+- +10 pontos por avaliação publicada e +5 por foto; estorno ao excluir a avaliação/foto (pelo consumidor ou pela moderação);
+- saldo total, saldo por loja e extrato com origem legível (“Avaliação publicada”, “Foto adicionada à avaliação”).
 
 ---
 
 ### ❤️ Favoritos
 
-O consumidor pode utilizar a interface de favoritos para:
-
-- marcar produtos como favoritos;
-- remover produtos dos favoritos;
-- acessar a tela **Meus favoritos**;
-- visualizar o estado do favorito nos cards e detalhes dos produtos.
-
-O Front-end utiliza a API como fonte de verdade e não utiliza `localStorage` ou listas locais para simular persistência.
-
-> A persistência real depende dos endpoints de favoritos no Back-end.
+- favoritar/desfavoritar nos cards e no detalhe do produto, lista **Meus favoritos** e sinalização de produto indisponível;
+- a API é a fonte de verdade (sem `localStorage` ou listas locais).
 
 ---
 
 ### 🛡️ Administração
 
-O perfil administrador possui funcionalidades relacionadas a:
-
-- gerenciamento de categorias;
-- moderação;
-- controle de conteúdos da plataforma;
-- acesso às funcionalidades administrativas previstas no projeto.
+- **Lojas**: lista por status, dados do lojista, aprovar e rejeitar com motivo;
+- **Categorias**: cadastrar, editar e excluir (bloqueado quando há produtos vinculados);
+- **Moderação**: avaliações com consumidor, loja, nota, comentário e fotos; remover avaliação ou foto (com estorno de pontos e remoção do arquivo no Storage).
 
 ---
 
@@ -172,17 +146,18 @@ Ao final da auditoria foram identificados e corrigidos **8 problemas de interfac
 
 ## 🧪 Testes
 
-O Front-end possui testes automatizados para as funcionalidades implementadas.
-
 Resultado da validação final:
 
 ```text
-133 testes aprovados
-Build aprovado
-git diff --check aprovado
+Front-end: 161 testes aprovados (npm test) · build aprovado · git diff --check aprovado
+Back-end: 100 testes aprovados (unittest), incluindo jornadas completas em SQLite:
+          cadastro com perfil, loja e aprovação, produtos e categorias,
+          confirmação de compra, avaliações e fotos, pontos, moderação, favoritos e perfil
 ```
 
-Também foram realizadas auditorias automatizadas da interface nas diferentes resoluções desktop utilizadas pelo projeto.
+As jornadas de visitante, consumidor, lojista e administrador também foram validadas
+de ponta a ponta no navegador (1024×768 a 1920×1080) contra o Back-end e o Supabase reais,
+com dados temporários removidos ao final.
 
 ---
 
@@ -292,9 +267,20 @@ No Windows PowerShell:
 
 ## 3. Configurar as variáveis de ambiente
 
-Configure o arquivo de ambiente utilizado pelo Back-end com as credenciais necessárias para acesso ao banco de dados e aos serviços do Supabase.
+Copie `backend/.env.example` para `backend/.env` e `frontend/.env.example` para `frontend/.env`.
 
-As credenciais não devem ser adicionadas ao repositório público.
+| Variável | Onde | Obrigatória |
+|---|---|---|
+| `DATABASE_URL` | Back-end | Sim |
+| `SUPABASE_URL` | Back-end | Sim |
+| `SUPABASE_SERVICE_ROLE_KEY` | Back-end (cadastro e Storage) | Sim — **nunca** no Front-end |
+| `SUPABASE_ANON_KEY` | Back-end (apenas `POST /auth/login`) | Não |
+| `CORS_ORIGINS` | Back-end | Não (padrão: Vite local) |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Front-end | Sim |
+| `VITE_API_URL` | Front-end | Não (padrão `http://127.0.0.1:8000`) |
+
+`SUPABASE_JWT_SECRET`, `VITE_DEMO_WHATSAPP` e `VITE_DEMO_INSTAGRAM` são obsoletas.
+As credenciais não devem ser adicionadas ao repositório.
 
 ---
 
@@ -352,15 +338,16 @@ Na pasta `frontend`:
 
 ```powershell
 npm test
-```
-
-Para validar o build:
-
-```powershell
 npm run build
 ```
 
-Também pode ser utilizada a verificação:
+Na raiz do projeto (Back-end, com o ambiente virtual ativo):
+
+```powershell
+python -m unittest discover -s backend/tests -t .
+```
+
+Verificação de espaços/finais de linha:
 
 ```powershell
 git diff --check
@@ -370,35 +357,33 @@ git diff --check
 
 ## 🔐 Perfis da aplicação
 
-As principais rotas privadas são protegidas de acordo com o perfil do usuário.
+As rotas privadas são protegidas no Front-end e no Back-end.
 
 ### Consumidor
 
-Exemplos:
-
 ```text
 #consumidor
+#consumidor/compras
 #consumidor/favoritos
 #consumidor/pontos
 #consumidor/avaliacoes
+#consumidor/avaliar/{loja}
 ```
 
 ### Lojista
 
-Exemplos:
-
 ```text
 #lojista
+#lojista/produtos
+#lojista/compras
 #lojista/avaliacoes
 ```
 
 ### Administrador
 
 ```text
-#admin
+#admin   (abas: Lojas, Gestão de Categorias, Moderação)
 ```
-
-Usuários não autorizados não devem acessar funcionalidades destinadas a outros perfis.
 
 ---
 
@@ -462,20 +447,13 @@ https://github.com/users/sthfnyy/projects/5
 
 # ⚠️ Estado atual e dependências
 
-A aplicação possui grande parte dos fluxos principais implementados, porém algumas funcionalidades da Iteração 3 ainda dependem da conclusão das respectivas APIs.
+Todos os fluxos principais estão integrados ao Back-end e ao Supabase reais.
 
-Entre as dependências identificadas estão:
+Dependências de ambiente:
 
-```text
-/consumidor/avaliacoes*
-/lojista/avaliacoes
-/consumidor/pontos
-/consumidor/favoritos*
-```
-
-Também foi identificada uma dependência relacionada à leitura de categorias no fluxo de cadastro de produtos do lojista.
-
-Enquanto uma API necessária não estiver disponível, o Front-end apresenta mensagens de indisponibilidade em vez de criar dados fictícios.
+- o banco deve conter o esquema do MiniMall (tabelas, triggers e o bucket `fotos-avaliacoes`) descrito em `backend/database/README.md`;
+- contas de administrador são promovidas manualmente no banco;
+- existem créditos de pontos órfãos gerados antes da correção da moderação; o relatório (somente leitura) e a correção comentada estão em `backend/database/relatorio_pontos_orfaos.sql`.
 
 Não são utilizados como substitutos da API:
 

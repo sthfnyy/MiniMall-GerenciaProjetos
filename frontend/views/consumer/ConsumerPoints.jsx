@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Coins, Store } from "lucide-react";
-import { getConsumerPoints } from "../../services/points.js";
+import { getConsumerPoints, movementOrigin } from "../../services/points.js";
 
 export default function ConsumerPoints({ data, go, loadPointsFn = getConsumerPoints }) {
   const [realPoints, setRealPoints] = useState(null);
@@ -40,7 +40,7 @@ export default function ConsumerPoints({ data, go, loadPointsFn = getConsumerPoi
 
   const storeBalances = (pointsData?.saldos_por_loja || []).map((item) => ({
     storeId: item.loja_id,
-    storeName: storesMap[item.loja_id]?.name || `Loja #${item.loja_id}`,
+    storeName: item.nome_loja || storesMap[item.loja_id]?.name || "Loja",
     balance: item.saldo,
   }));
 
@@ -184,7 +184,7 @@ export default function ConsumerPoints({ data, go, loadPointsFn = getConsumerPoi
                   {sortedTransactions.map((t) => {
                     const isCredit = t.tipo === "credito";
                     const storeName =
-                      storesMap[t.loja_id]?.name || `Loja #${t.loja_id}`;
+                      t.nome_loja || storesMap[t.loja_id]?.name || "Loja";
 
                     return (
                       <tr key={t.id}>
@@ -211,10 +211,7 @@ export default function ConsumerPoints({ data, go, loadPointsFn = getConsumerPoi
                           </strong>
                         </td>
                         <td>
-                          {t.descricao ||
-                            (isCredit
-                              ? "Crédito de pontos"
-                              : "Resgate de pontos")}
+                          {movementOrigin(t)}
                         </td>
                         <td>
                           <span

@@ -11,6 +11,8 @@ import ConsumerFavorites from "./views/consumer/ConsumerFavorites";
 import ConsumerReviews from "./views/consumer/ConsumerReviews";
 import ConsumerPoints from "./views/consumer/ConsumerPoints";
 import ReviewForm from "./views/consumer/ReviewForm";
+import ConsumerPurchases from "./views/consumer/ConsumerPurchases";
+import PurchaseConfirmations from "./views/merchant/PurchaseConfirmations";
 import StoreSettings from "./views/merchant/StoreSettings";
 import ProductList from "./views/merchant/ProductList";
 import ProductForm from "./views/merchant/ProductForm";
@@ -155,6 +157,8 @@ export default function App() {
     } else {
       setToast("Avaliação publicada com sucesso.");
     }
+    // Atualiza média e contagem de avaliações na vitrine.
+    setCatalogRevision((r) => r + 1);
     go("consumidor/avaliacoes");
   }
 
@@ -213,7 +217,7 @@ export default function App() {
 
   const productFormRoute = route === "lojista/produtos/novo" || route.startsWith("lojista/produtos/editar/");
   const known =
-    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/favoritos", "consumidor/pontos", "consumidor/avaliacoes", "lojista/avaliacoes"].includes(route) ||
+    ["inicio", "explorar", "lojas", "login", "cadastro", "consumidor", "lojista", "lojista/produtos", "lojista/produtos/novo", "admin", "consumidor/favoritos", "consumidor/pontos", "consumidor/avaliacoes", "consumidor/compras", "lojista/avaliacoes", "lojista/compras"].includes(route) ||
     productFormRoute ||
     Boolean(product) ||
     Boolean(store) ||
@@ -283,17 +287,18 @@ export default function App() {
       {catalogError && <div className="error" role="alert">{catalogError} <button className="text-button" onClick={() => setCatalogRevision((r) => r + 1)}>Recarregar vitrine</button></div>}
       {catalogLoading && ["inicio", "explorar", "lojas"].includes(route) && <p role="status">Carregando vitrine…</p>}
       {authError && <div className="error" role="alert">{authError}</div>}
-      {restricted ? authLoading ? <p role="status">Verificando acesso…</p> : <Empty title="Acesso restrito" text="Entre com uma conta autorizada para acessar esta página." action={<button className="primary" onClick={() => go("login")}>Entrar</button>} /> : <>
+      {restricted ? authLoading ? <p role="status">Verificando acesso…</p> : <Empty headingLevel={1} title="Acesso restrito" text={user ? "Sua conta não tem permissão para acessar esta página." : "Entre com uma conta autorizada para acessar esta página."} action={user ? <button className="primary" onClick={() => go(getAuthenticatedRoute(user.role))}>Ir para minha área</button> : <button className="primary" onClick={() => go("login")}>Entrar</button>} /> : <>
         {route === "inicio" && <Home products={products} stores={approved} onProduct={onProduct} onExplore={(category) => { setFilters({ ...emptyFilters, category: category || "" }); go("explorar"); }} onStores={() => go("lojas")} storeCard={storeCard} />}
         {route === "explorar" && <Catalog data={data} filters={filters} setFilters={setFilters} onProduct={onProduct} onStore={onStore} {...favoriteProps} />}
         {route === "lojas" && <>
           <div className="page-title"><h1>Lojas</h1></div>
           {approved.length ? <div className="store-grid all-stores">{approved.map(storeCard)}</div> : <Empty title="Nenhuma loja encontrada" text="Ainda não há lojas com produtos publicados na vitrine." action={<button className="primary" onClick={() => go("explorar")}>Ver vitrine</button>} />}
         </>}
-        {store && <StorePage store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} onReview={(selectedStore) => go(`consumidor/avaliar/${selectedStore.id}`)} {...favoriteProps} />}
-        {product && <ProductDetail product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} {...(favoriteProps.onToggleFavorite ? { isFavorite: isFavorite(product.id), onToggleFavorite: toggleFavorite, favoriteBusy: isFavoriteBusy(product.id) } : {})} />}
+        {store && <StorePage key={store.id} store={store} data={data} onProduct={onProduct} onStore={onStore} go={go} user={user} notify={setToast} {...favoriteProps} />}
+        {product && <ProductDetail key={product.id} product={product} store={approved.find((s) => String(s.id) === String(product.store))} go={go} user={user} notify={setToast} {...(favoriteProps.onToggleFavorite ? { isFavorite: isFavorite(product.id), onToggleFavorite: toggleFavorite, favoriteBusy: isFavoriteBusy(product.id) } : {})} />}
         {["login", "cadastro"].includes(route) && <AuthPage key={route} mode={route} onSuccess={login} go={go} />}
-        {route === "consumidor" && <ConsumerProfile user={user} onLogout={logout} onFavorites={() => go("consumidor/favoritos")} onPoints={() => go("consumidor/pontos")} onReviews={() => go("consumidor/avaliacoes")} />}
+        {route === "consumidor" && <ConsumerProfile user={user} notify={setToast} onLogout={logout} onPurchases={() => go("consumidor/compras")} onFavorites={() => go("consumidor/favoritos")} onPoints={() => go("consumidor/pontos")} onReviews={() => go("consumidor/avaliacoes")} onProfileUpdated={(updated) => setUser((current) => current ? { ...current, name: updated.nome_completo } : current)} />}
+        {route === "consumidor/compras" && <ConsumerPurchases go={go} />}
         {route === "consumidor/favoritos" && <ConsumerFavorites go={go} onFavoriteRemoved={(productId) => setFavoriteIds((ids) => applyFavoriteState(ids, productId, false))} />}
         {route === "consumidor/pontos" && <ConsumerPoints data={data} go={go} />}
         {route === "consumidor/avaliacoes" && <ConsumerReviews data={data} go={go} />}
@@ -304,9 +309,10 @@ export default function App() {
         }} />}
         {route === "lojista/produtos" && <ProductList go={go} notify={setToast} />}
         {route === "lojista/avaliacoes" && <StoreReviews go={go} />}
+        {route === "lojista/compras" && <PurchaseConfirmations go={go} notify={setToast} />}
         {productFormRoute && <ProductForm key={route} productId={route.startsWith("lojista/produtos/editar/") ? route.split("/")[3] : null} go={go} notify={setToast} />}
-        {route === "admin" && <Admin notify={setToast} onCategoriesChange={() => setCatalogRevision((r) => r + 1)} />}
-        {!known && !catalogLoading && <Empty title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
+        {route === "admin" && <Admin notify={setToast} onCategoriesChange={() => setCatalogRevision((r) => r + 1)} onStoresChange={() => setCatalogRevision((r) => r + 1)} />}
+        {!known && !catalogLoading && <Empty headingLevel={1} title="Página não encontrada" text="Esta página não está disponível." action={<button className="primary" onClick={() => go("inicio")}>Voltar ao início</button>} />}
       </>}
     </main>
     <footer><a className="brand" href="#inicio">mini<span>mall</span><i /></a></footer>

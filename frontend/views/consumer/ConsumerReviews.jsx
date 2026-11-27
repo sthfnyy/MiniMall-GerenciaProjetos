@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Star, Store } from "lucide-react";
+import PhotoUploadButton from "../../components/PhotoUploadButton";
+import { Modal } from "../../components/ui";
 import {
   appendReviewPhoto,
   deleteConsumerReview,
@@ -26,6 +28,8 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
   const [selectedPhotos, setSelectedPhotos] = useState({});
   const [photoErrors, setPhotoErrors] = useState({});
   const [photoProcessing, setPhotoProcessing] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
+  const [confirmError, setConfirmError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -64,9 +68,10 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
     }
   }
 
-  function getStoreName(storeId) {
+  function getStoreName(storeId, review) {
+    if (review?.loja_nome) return review.loja_nome;
     const store = stores.find((item) => String(item.id) === String(storeId));
-    return store?.name || store?.nome_loja || `Loja #${storeId}`;
+    return store?.name || store?.nome_loja || "Loja";
   }
 
   function startEditing(review) {
@@ -105,20 +110,38 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
     }
   }
 
-  async function removeReview(review) {
-    if (processingId || !window.confirm("Excluir esta avaliação?")) return;
-    setProcessingId(review.id);
-    setError("");
+  function removeReview(review) {
+    if (processingId) return;
+    setConfirmError("");
+    setConfirmation({ type: "review", review });
+  }
 
+  async function confirmRemoval() {
+    if (!confirmation) return;
+    const { type, review, photo } = confirmation;
+    setConfirmError("");
+    if (type === "review") {
+      setProcessingId(review.id);
+      try {
+        await deleteConsumerReview(review.id);
+        setRealReviews((current) => current.filter((item) => item.id !== review.id));
+        setConfirmation(null);
+      } catch (deleteError) {
+        setConfirmError(deleteError.message);
+      } finally {
+        setProcessingId(null);
+      }
+      return;
+    }
+    setPhotoProcessing(`delete-${photo.id}`);
     try {
-      await deleteConsumerReview(review.id);
-      setRealReviews((current) =>
-        current.filter((item) => item.id !== review.id),
-      );
+      await deleteConsumerReviewPhoto(review.id, photo.id);
+      setRealReviews((current) => removeReviewPhoto(current, review.id, photo.id));
+      setConfirmation(null);
     } catch (deleteError) {
-      setError(deleteError.message);
+      setConfirmError(deleteError.message);
     } finally {
-      setProcessingId(null);
+      setPhotoProcessing(null);
     }
   }
 
@@ -167,30 +190,10 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
     }
   }
 
-  async function removePhoto(review, photo) {
-    if (
-      photoProcessing ||
-      !window.confirm("Remover esta foto da avaliação?")
-    ) {
-      return;
-    }
-
-    setPhotoProcessing(`delete-${photo.id}`);
-    setPhotoErrors((current) => ({ ...current, [review.id]: "" }));
-
-    try {
-      await deleteConsumerReviewPhoto(review.id, photo.id);
-      setRealReviews((current) =>
-        removeReviewPhoto(current, review.id, photo.id),
-      );
-    } catch (deleteError) {
-      setPhotoErrors((current) => ({
-        ...current,
-        [review.id]: deleteError.message,
-      }));
-    } finally {
-      setPhotoProcessing(null);
-    }
+  function removePhoto(review, photo) {
+    if (photoProcessing) return;
+    setConfirmError("");
+    setConfirmation({ type: "photo", review, photo });
   }
 
   return (
@@ -228,7 +231,7 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
         <div className="review-list">
           {userReviews.map((review) => {
             const storeId = getReviewStoreId(review);
-            const storeName = getStoreName(storeId);
+            const storeName = getStoreName(storeId, review);
             const ratingValue = review.rating || review.nota || 0;
             const commentText = review.comment ?? review.comentario;
             const photos = getReviewPhotos(review);
@@ -238,7 +241,7 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
               <article className="review" key={review.id}>
                 <div className="review-top">
                   <div className="consumer-review-store">
-                    <span className="avatar"><Store size={18} /></span>
+                    <span className="avatar" aria-hidden="true"><Store size={18} /></span>
                     <div>
                       {go ? (
                         <button
@@ -336,18 +339,16 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
                         </small>
                         {photos.length < MAX_REVIEW_PHOTOS ? (
                           <>
-                            <input
-                              key={`photo-${review.id}-${selectedPhotos[review.id]?.name || "empty"}`}
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
+                            <PhotoUploadButton
+                              multiple={false}
+                              label={selectedPhotos[review.id] ? "Trocar foto" : "Adicionar foto"}
+                              ariaLabel={`Selecionar foto para avaliação de ${storeName}`}
                               disabled={photoProcessing === `upload-${review.id}`}
-                              aria-label={`Selecionar foto para avaliação de ${storeName}`}
-                              onChange={(event) =>
-                                selectPhoto(review, event.target.files?.[0])
-                              }
+                              remaining={MAX_REVIEW_PHOTOS - photos.length}
+                              onSelect={(files) => selectPhoto(review, files[0])}
                             />
                             {selectedPhotos[review.id] && (
-                              <small>{selectedPhotos[review.id].name}</small>
+                              <small>Selecionada: {selectedPhotos[review.id].name}</small>
                             )}
                             <button
                               className="outline"
@@ -410,6 +411,27 @@ export default function ConsumerReviews({ data, go, listReviewsFn = listConsumer
           )}
         </div>
       ) : null}
+
+      {confirmation && (
+        <Modal
+          title={confirmation.type === "review" ? "Excluir avaliação" : "Remover foto"}
+          onClose={() => setConfirmation(null)}
+          busy={Boolean(processingId || photoProcessing)}
+        >
+          <p>
+            {confirmation.type === "review"
+              ? "A avaliação e suas fotos serão excluídas. Os pontos ganhos com ela serão estornados."
+              : "A foto será removida da avaliação e os 5 pontos dela serão estornados."}
+          </p>
+          {confirmError && <p className="error" role="alert">{confirmError}</p>}
+          <div className="modal-actions">
+            <button className="outline" type="button" disabled={Boolean(processingId || photoProcessing)} onClick={() => setConfirmation(null)}>Cancelar</button>
+            <button className="primary red" type="button" disabled={Boolean(processingId || photoProcessing)} onClick={confirmRemoval}>
+              {processingId || photoProcessing ? "Removendo..." : "Confirmar"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

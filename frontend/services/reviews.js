@@ -25,7 +25,7 @@ export function validateConsumerReviewPhoto(file, currentPhotoCount = 0) {
 }
 
 // O apiRequest de Gerência expõe o código HTTP em error.status; o formato
-// "HTTP <código>" na mensagem é mantido por compatibilidade com o PDSI-I.
+// "HTTP <código>" na mensagem é mantido por compatibilidade.
 function errorStatus(error) {
   if (Number.isInteger(error?.status)) return error.status;
   const match = /HTTP (\d{3})/.exec(error?.message || "");
@@ -67,6 +67,19 @@ function friendlyPhotoError(error) {
   return error instanceof Error ? error : new Error(message);
 }
 
+const GENERIC_MESSAGES = [
+  "Not Found",
+  "Method Not Allowed",
+  "Você não possui permissão para realizar esta operação.",
+  "Sessão inválida ou expirada.",
+];
+
+function backendDetail(error) {
+  const message = error?.message || "";
+  if (!message || GENERIC_MESSAGES.includes(message) || /^Erro na API: HTTP/.test(message)) return "";
+  return message;
+}
+
 export function friendlyReviewError(error) {
   const status = errorStatus(error);
 
@@ -74,13 +87,15 @@ export function friendlyReviewError(error) {
     return withStatus("Sua sessão expirou. Entre novamente como consumidor.", 401);
   }
   if (status === 403) {
-    return withStatus("Somente consumidores podem publicar e consultar avaliações.", 403);
+    // O backend explica o motivo (ex.: compra ainda não confirmada pela loja).
+    const detail = backendDetail(error);
+    return withStatus(detail || "Somente consumidores podem publicar e consultar avaliações.", 403);
   }
   if (status === 404) {
-    return withStatus(
-      "Loja ou avaliação não encontrada, ou o serviço de avaliações não está disponível no momento.",
-      404,
-    );
+    return withStatus(backendDetail(error) || "Loja ou avaliação não encontrada.", 404);
+  }
+  if (status === 409) {
+    return withStatus(backendDetail(error) || "Você já avaliou esta loja.", 409);
   }
   if (status === 422) {
     return withStatus(
@@ -172,7 +187,7 @@ export function normalizeStoreReview(review) {
   return {
     id: review.id,
     store: review.store ?? review.storeId ?? review.loja_id,
-    name: review.name ?? review.consumerName ?? review.consumidor_nome ?? "Consumidor",
+    name: review.consumidor_nome ?? review.name ?? review.consumerName ?? "Consumidor",
     rating: Number(review.rating ?? review.nota) || 0,
     comment: review.comment ?? review.comentario ?? "",
     photo: review.photo ?? review.foto_url ?? "",
@@ -181,9 +196,10 @@ export function normalizeStoreReview(review) {
   };
 }
 
+// Avaliações públicas da loja: leitura sem login.
 export async function listStoreReviews(storeId, request = apiRequest) {
   const response = await reviewRequest(
-    request(`/consumidor/avaliacoes/loja/${storeId}`),
+    request(`/lojas/${encodeURIComponent(storeId)}/avaliacoes`, { authenticated: false }),
   );
   if (!Array.isArray(response)) return [];
   return response.map(normalizeStoreReview).filter(Boolean);
@@ -270,7 +286,7 @@ export function getStoreReviews(reviews = [], storeId) {
   );
 }
 
-// Mesmas regras e mensagens do publishReview do PDSI-I, sem persistência local.
+// Publica a avaliação pela API, sem persistência local.
 export function validateReviewInput({ user, store, rating, comment, photos = [] }) {
   if (user?.role !== "consumidor") {
     throw new Error("Somente consumidores podem publicar avaliações.");

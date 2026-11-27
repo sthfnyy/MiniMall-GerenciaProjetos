@@ -6,9 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_profile, require_lojista
+from ..auth import require_lojista
 from ..config.database import get_db
-from ..models import Loja, Profile, StatusLoja, UserRole
+from ..models import Loja, Profile, StatusLoja
 from ..schemas import LojaCreateIn, LojaDetailOut, LojaUpdateIn
 
 router = APIRouter(prefix="/lojista/loja", tags=["lojista - perfil da loja"])
@@ -47,7 +47,8 @@ async def consultar_minha_loja(
 @router.post("", response_model=LojaDetailOut, status_code=status.HTTP_201_CREATED)
 async def cadastrar_loja(
     payload: LojaCreateIn,
-    profile: Profile = Depends(get_current_profile),
+    # RN07: somente contas lojista cadastram loja (consumidor recebe 403).
+    profile: Profile = Depends(require_lojista),
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -93,10 +94,6 @@ async def cadastrar_loja(
         criado_em=agora,
         atualizado_em=agora,
     )
-
-    if profile.role != UserRole.lojista and profile.role != UserRole.admin:
-        profile.role = UserRole.lojista
-        profile.atualizado_em = agora
 
     db.add(nova_loja)
 

@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   Heart,
 } from "lucide-react";
+import PurchaseGate from "../components/PurchaseGate";
 import WhatsAppContactButton from "../components/WhatsAppContactButton";
 import { money, price } from "../services/catalog";
 
@@ -13,6 +14,8 @@ export default function ProductDetail({
   product: p,
   store: s,
   go,
+  user,
+  notify,
   isFavorite = false,
   onToggleFavorite,
   favoriteBusy = false,
@@ -74,6 +77,16 @@ export default function ProductDetail({
             whatsapp={s?.whatsapp || p.whatsapp}
             productName={p.name}
             price={price(p)}
+            productId={p.id}
+          />
+          <PurchaseGate
+            mode="product"
+            user={user}
+            storeId={storeId}
+            storeName={storeName}
+            product={p}
+            go={go}
+            notify={notify}
           />
         </div>
       </div>

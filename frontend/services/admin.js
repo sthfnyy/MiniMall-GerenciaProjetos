@@ -54,6 +54,37 @@ export async function deleteAdminReviewPhoto(id, request = apiRequest) {
   });
 }
 
+// Moderação de lojas: /admin/lojas, aprovar e rejeitar.
+export const STORE_STATUS_LABELS = {
+  pendente: "Pendente",
+  aprovada: "Aprovada",
+  rejeitada: "Rejeitada",
+};
+
+export function rejectionReason(value = "") {
+  const reason = String(value || "").trim();
+  if (reason.length < 5) throw new Error("Informe o motivo da rejeição (mínimo de 5 caracteres).");
+  if (reason.length > 500) throw new Error("O motivo deve ter no máximo 500 caracteres.");
+  return reason;
+}
+
+export async function getAdminStores(status = "", request = apiRequest) {
+  const query = status ? `?status_filtro=${encodeURIComponent(status)}` : "";
+  const stores = await request(`/admin/lojas${query}`);
+  return Array.isArray(stores) ? stores : [];
+}
+
+export async function approveAdminStore(id, request = apiRequest) {
+  return request(`/admin/lojas/${encodeURIComponent(id)}/aprovar`, { method: "PATCH" });
+}
+
+export async function rejectAdminStore(id, reason, request = apiRequest) {
+  return request(`/admin/lojas/${encodeURIComponent(id)}/rejeitar`, {
+    method: "PATCH",
+    body: JSON.stringify({ motivo_rejeicao: rejectionReason(reason) }),
+  });
+}
+
 export function createAdminService(request = apiRequest) {
   return {
     categories: () => getAdminCategories(request),

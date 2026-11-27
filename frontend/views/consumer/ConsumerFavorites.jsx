@@ -136,10 +136,21 @@ export default function ConsumerFavorites({
                   </button>
                 </div>
                 <div className="product-info">
-                  <strong className="product-name">{produto.titulo}</strong>
+                  {go && produto.ativo !== false ? (
+                    <button type="button" className="product-name-link" onClick={() => go(`produto/${produto.id}`)}>
+                      <strong className="product-name">{produto.titulo}</strong>
+                    </button>
+                  ) : (
+                    <strong className="product-name">{produto.titulo}</strong>
+                  )}
+                  {produto.ativo === false && <span className="status-badge rejected">Indisponível</span>}
                   <p>{produto.descricao}</p>
                   <div className="price">
-                    <strong>{money(Number(produto.preco_base))}</strong>
+                    {produto.preco_promocional ? (
+                      <><strong>{money(Number(produto.preco_promocional))}</strong> <s>{money(Number(produto.preco_base))}</s></>
+                    ) : (
+                      <strong>{money(Number(produto.preco_base))}</strong>
+                    )}
                   </div>
                   {removingId === produto.id && <small>Removendo...</small>}
                 </div>

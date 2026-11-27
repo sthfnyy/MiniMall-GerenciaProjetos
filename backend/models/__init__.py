@@ -23,10 +23,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-Table(
+auth_users = Table(
     "users",
     Base.metadata,
     Column("id", UUID(as_uuid=True), primary_key=True),
+    # Somente leitura: usado pelo admin para identificar o lojista.
+    Column("email", Text),
     schema="auth",
 )
 
@@ -45,6 +47,13 @@ class StatusLoja(str, enum.Enum):
 class TipoTransacaoPontos(str, enum.Enum):
     credito = "credito"
     resgate = "resgate"
+
+
+class StatusIntencaoCompra(str, enum.Enum):
+    # "Pendente": o consumidor solicitou a confirmação da compra.
+    contato_realizado = "contato_realizado"
+    compra_confirmada = "compra_confirmada"
+    compra_nao_reconhecida = "compra_nao_reconhecida"
 
 
 class Profile(Base):
@@ -148,6 +157,10 @@ class Produto(Base):
         nullable=False,
     )
     foto_principal_url: Mapped[str | None] = mapped_column(Text)
+    preco_promocional: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+    )
     ativo: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -248,6 +261,48 @@ class PontosTransacao(Base):
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+
+
+class IntencaoCompra(Base):
+    """Solicitação de confirmação de compra (tabela criada pela migração 046/047)."""
+
+    __tablename__ = "intencoes_compra"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    consumidor_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("auth.users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    loja_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("lojas.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    produto_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("produtos.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    codigo: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    status: Mapped[StatusIntencaoCompra] = mapped_column(
+        Enum(
+            StatusIntencaoCompra,
+            name="status_intencao_compra",
+            schema="public",
+        ),
+        default=StatusIntencaoCompra.contato_realizado,
+        nullable=False,
+    )
+    criado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    decidido_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    decidido_por: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("auth.users.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
 

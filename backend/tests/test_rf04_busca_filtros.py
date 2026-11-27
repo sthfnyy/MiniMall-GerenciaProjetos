@@ -79,8 +79,8 @@ class RF04BuscaFiltrosTestCase(unittest.TestCase):
             set(produto),
             {
                 "id", "loja_id", "categoria_id", "titulo", "descricao", "preco_base",
-                "foto_principal_url", "ativo", "criado_em", "atualizado_em",
-                "nome_loja", "nome_categoria", "whatsapp",
+                "foto_principal_url", "preco_promocional", "ativo", "criado_em",
+                "atualizado_em", "nome_loja", "nome_categoria", "whatsapp",
             },
         )
 

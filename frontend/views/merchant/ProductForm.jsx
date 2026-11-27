@@ -10,7 +10,7 @@ import {
 } from "../../services/merchant";
 
 const emptyProduct = {
-  categoria_id: "", titulo: "", descricao: "", preco_base: "",
+  categoria_id: "", titulo: "", descricao: "", preco_base: "", preco_promocional: "",
   foto_principal_url: "", ativo: true,
 };
 
@@ -49,6 +49,7 @@ export default function ProductForm({ productId, go, notify }) {
         titulo: product.titulo,
         descricao: product.descricao || "",
         preco_base: String(product.preco_base),
+        preco_promocional: product.preco_promocional == null ? "" : String(product.preco_promocional),
         foto_principal_url: product.foto_principal_url || "",
         ativo: product.ativo,
       } : { ...emptyProduct });
@@ -90,7 +91,7 @@ export default function ProductForm({ productId, go, notify }) {
       <div className="consumer-profile-card merchant-form-card"><form onSubmit={handleSubmit} className="merchant-form"><fieldset disabled={saving}>
         <div className="merchant-form-section"><h3>Foto do Produto</h3><p className="muted">Informe o link público de uma imagem do produto.</p>
           <div className="product-upload-container"><div className="product-upload-preview">{values.foto_principal_url ? <img src={values.foto_principal_url} alt="Pré-visualização do produto" /> : <div className="product-upload-placeholder"><ImageIcon size={44} /><span>Sem imagem informada</span></div>}</div>
-            <div className="product-upload-controls"><Field label="URL da imagem"><input type="url" value={values.foto_principal_url} onChange={(event) => set("foto_principal_url", event.target.value)} placeholder="https://…" className="product-url-input" /></Field><p className="upload-help-text">O backend atual aceita URL pública; upload de arquivo não faz parte deste contrato.</p></div>
+            <div className="product-upload-controls"><Field label="URL da imagem"><input type="url" value={values.foto_principal_url} onChange={(event) => set("foto_principal_url", event.target.value)} placeholder="https://…" className="product-url-input" /></Field><p className="upload-help-text">Cole o link público de uma imagem (http ou https).</p></div>
           </div>
         </div>
 
@@ -99,12 +100,14 @@ export default function ProductForm({ productId, go, notify }) {
             <Field label="Nome do produto *"><input required minLength={2} maxLength={180} value={values.titulo} onChange={(event) => set("titulo", event.target.value)} /></Field>
             <Field label="Categoria *"><select required value={values.categoria_id} onChange={(event) => set("categoria_id", event.target.value)} disabled={!categories.length}><option value="">Selecione uma categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.nome}</option>)}</select></Field>
           </div>
-          {categoryError && <div className="error-banner" role="alert"><AlertTriangle size={18} /><span>{categoryError} O produto não pode ser salvo até que o backend ofereça a leitura de categorias.</span></div>}
+          {categoryError && <div className="error-banner" role="alert"><AlertTriangle size={18} /><span>{categoryError}</span><button type="button" className="secondary" onClick={() => setRevision((value) => value + 1)}>Tentar novamente</button></div>}
+          {!categoryError && !categories.length && <p className="muted" role="status">Nenhuma categoria cadastrada. Peça ao administrador para cadastrar as categorias.</p>}
           <Field label="Descrição detalhada"><textarea rows={4} value={values.descricao} onChange={(event) => set("descricao", event.target.value)} /></Field>
         </div>
 
         <div className="merchant-form-section"><h3>Preço e Situação</h3><p className="muted">Configure o valor regular e a disponibilidade do produto.</p><div className="merchant-grid">
           <Field label="Preço de venda (R$) *"><input type="number" step="0.01" min="0" max="99999999.99" required value={values.preco_base} onChange={(event) => set("preco_base", event.target.value)} /></Field>
+          <Field label="Preço promocional (R$)"><input type="number" step="0.01" min="0.01" max="99999999.99" value={values.preco_promocional} onChange={(event) => set("preco_promocional", event.target.value)} aria-describedby="promo-help" /><small id="promo-help" className="muted">Opcional. Deve ser menor que o preço de venda.</small></Field>
           <Field label="Situação"><select value={String(values.ativo)} onChange={(event) => set("ativo", event.target.value === "true")}><option value="true">Ativo</option><option value="false">Inativo</option></select></Field>
         </div></div>
 

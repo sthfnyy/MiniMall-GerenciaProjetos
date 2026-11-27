@@ -1,7 +1,10 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useId } from "react";
 import { X, Search } from "lucide-react";
-export function Modal({ title, children, onClose, wide = false }) {
+// busy: enquanto uma operação assíncrona estiver em andamento, Esc, clique
+// fora e o botão Fechar não encerram o diálogo (evita estado divergente).
+export function Modal({ title, children, onClose, wide = false, busy = false }) {
   const ref = useRef();
+  const titleId = useId();
   useEffect(() => {
     const old = document.activeElement;
     const d = ref.current;
@@ -11,16 +14,24 @@ export function Modal({ title, children, onClose, wide = false }) {
       old?.focus();
     };
   }, []);
+  const close = () => {
+    if (!busy) onClose?.();
+  };
   return (
     <dialog
       ref={ref}
       className={wide ? "modal wide" : "modal"}
-      onCancel={onClose}
-      onClick={(e) => e.target === ref.current && onClose()}
+      aria-labelledby={titleId}
+      aria-busy={busy || undefined}
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
+      onClick={(e) => e.target === ref.current && close()}
     >
       <div className="modal-head">
-        <h2>{title}</h2>
-        <button className="icon-button" aria-label="Fechar" onClick={onClose}>
+        <h2 id={titleId}>{title}</h2>
+        <button className="icon-button" type="button" aria-label="Fechar" onClick={close} disabled={busy}>
           <X />
         </button>
       </div>
@@ -32,11 +43,13 @@ export function Empty({
   title = "Nenhum produto encontrado",
   text = "Tente outra busca ou remova os filtros.",
   action,
+  headingLevel = 3,
 }) {
+  const Heading = `h${headingLevel}`;
   return (
     <div className="empty">
-      <Search size={34} />
-      <h3>{title}</h3>
+      <Search size={34} aria-hidden="true" />
+      <Heading>{title}</Heading>
       <p>{text}</p>
       {action}
     </div>

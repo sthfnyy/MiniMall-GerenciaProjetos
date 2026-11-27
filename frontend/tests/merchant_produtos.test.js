@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { canAccessRoute } from "../services/auth.js";
 import {
   createStoreProduct,
@@ -111,6 +112,31 @@ test("consumidor não acessa rotas de produtos", () => {
   assert.equal(canAccessRoute("lojista/produtos", { role: "lojista" }), true);
 });
 
-test("categorias permanecem bloqueadas sem endpoint real", async () => {
-  await assert.rejects(fetchProductCategories(), /não disponibiliza categorias/);
+test("categorias do lojista vêm de GET /lojista/produtos/categorias", async () => {
+  const calls = [];
+  const categories = await fetchProductCategories(async (path) => {
+    calls.push(path);
+    return [{ id: "c2", nome: "Vestuário" }, { id: "c1", nome: "Acessórios" }];
+  });
+  assert.deepEqual(calls, ["/lojista/produtos/categorias"]);
+  assert.deepEqual(categories.map((item) => item.nome), ["Acessórios", "Vestuário"]);
+});
+
+test("erro ao carregar categorias é explicado ao lojista", async () => {
+  const fail = (status) => async () => { const error = new Error("Not Found"); error.status = status; throw error; };
+  await assert.rejects(fetchProductCategories(fail(404)), /Cadastre sua loja/);
+  await assert.rejects(fetchProductCategories(fail(500)), /Not Found|categorias/);
+});
+
+test("formulário de produto não bloqueia mais o salvamento por falta de endpoint", async () => {
+  const form = await readFile(new URL("../views/merchant/ProductForm.jsx", import.meta.url), "utf8");
+  assert.doesNotMatch(form, /até que o backend ofereça/);
+  assert.match(form, /Preço promocional/);
+});
+
+test("preço promocional é validado e enviado no payload", () => {
+  assert.equal(productPayload(form({ preco_base: "100", preco_promocional: "79.90" })).preco_promocional, "79.90");
+  assert.equal(productPayload(form({ preco_promocional: "" })).preco_promocional, null);
+  assert.throws(() => productPayload(form({ preco_base: "50", preco_promocional: "60" })), /menor que o preço de venda/);
+  assert.throws(() => productPayload(form({ preco_promocional: "0" })), /maior que zero/);
 });

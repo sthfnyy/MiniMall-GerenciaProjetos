@@ -13,14 +13,15 @@ import {
   signUp,
 } from "../services/auth.js";
 
-test("cadastro usa /auth/register e não envia role", async () => {
+test("cadastro usa /auth/register e envia o tipo de conta escolhido", async () => {
   let url;
   let options;
   const response = await signUp([], {
     name: " Maria Silva ",
     email: " MARIA@EXAMPLE.COM ",
     password: "senha1234",
-    role: "lojista",
+    accountType: "lojista",
+    role: "admin",
   }, async (nextUrl, nextOptions) => {
     url = nextUrl;
     options = nextOptions;
@@ -31,8 +32,32 @@ test("cadastro usa /auth/register e não envia role", async () => {
     nome_completo: "Maria Silva",
     email: "maria@example.com",
     senha: "senha1234",
+    perfil: "lojista",
   });
   assert.equal(response.mensagem, "ok");
+});
+
+test("cadastro só aceita consumidor ou lojista e nunca admin", async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls += 1; return { ok: true, json: async () => ({}) }; };
+  const base = { name: "Maria Silva", email: "a@b.com", password: "senha1234" };
+  for (const accountType of ["admin", "administrador", "", undefined]) {
+    await assert.rejects(signUp([], { ...base, accountType }, fetchImpl), /consumidor ou lojista/);
+  }
+  assert.equal(calls, 0);
+  await signUp([], { ...base, accountType: "consumidor" }, async (_url, options) => {
+    assert.equal(JSON.parse(options.body).perfil, "consumidor");
+    return { ok: true, json: async () => ({}) };
+  });
+});
+
+test("tela de cadastro oferece apenas Consumidor e Lojista", async () => {
+  const page = await readFile(new URL("../views/AuthPage.jsx", import.meta.url), "utf8");
+  assert.match(page, /type="radio"/);
+  assert.match(page, /value: "consumidor"/);
+  assert.match(page, /value: "lojista"/);
+  assert.doesNotMatch(page, /value: "admin"/);
+  assert.match(page, /<legend>Tipo de conta<\/legend>/);
 });
 
 test("cadastro inválido não faz requisição", async () => {

@@ -22,7 +22,7 @@ def criar_banco_sqlite():
         conexao.exec_driver_sql("""CREATE TABLE produtos (
             id CHAR(32) PRIMARY KEY, loja_id CHAR(32), categoria_id CHAR(32),
             titulo TEXT, descricao TEXT, preco_base NUMERIC(10,2),
-            foto_principal_url TEXT, ativo BOOLEAN,
+            foto_principal_url TEXT, preco_promocional NUMERIC(10,2), ativo BOOLEAN,
             criado_em DATETIME, atualizado_em DATETIME
         )""")
     return engine

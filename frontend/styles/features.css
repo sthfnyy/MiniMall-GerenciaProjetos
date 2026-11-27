@@ -1,0 +1,413 @@
+/* Componentes de funcionalidades (desktop/notebook).
+   Usa as variáveis de theme.css: --ink, --lime, --paper, --border, --muted. */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Cadastro: tipo de conta ---------- */
+.account-type-picker {
+  border: 0;
+  margin: 0 0 18px;
+  padding: 0;
+  min-width: 0;
+}
+.account-type-picker legend {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.account-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.account-type-option {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.account-type-option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.account-type-option:hover {
+  border-color: var(--ink);
+}
+.account-type-option.selected {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--lime) 35%, #fff);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+.account-type-option:has(input:focus-visible) {
+  outline: 2px solid #596c25;
+  outline-offset: 3px;
+}
+.account-type-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.account-type-text {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ---------- Upload de fotos ---------- */
+.photo-upload {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.photo-upload-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  position: relative;
+}
+.photo-upload-button:hover {
+  background: color-mix(in srgb, var(--lime) 40%, #fff);
+}
+.photo-upload-button:has(input:focus-visible) {
+  outline: 2px solid #596c25;
+  outline-offset: 4px;
+}
+.photo-upload-button.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.photo-upload-help,
+.photo-upload-limit {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.photo-thumbs {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.photo-thumb {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-thumb-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(36, 40, 32, 0.85);
+  color: #fff;
+  cursor: pointer;
+}
+.photo-thumb-remove:hover {
+  background: #b74450;
+}
+.photo-thumb-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Confirmação de compra ---------- */
+.purchase-gate {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+.purchase-gate > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.purchase-gate > div {
+  flex: 1;
+  min-width: 0;
+}
+.purchase-gate p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.purchase-gate > button {
+  flex: none;
+  align-self: center;
+}
+.purchase-gate.confirmed {
+  border-color: #b9d68b;
+  background: #f6fbea;
+}
+.purchase-gate.pending {
+  border-color: #f2d58a;
+  background: #fffaeb;
+}
+.purchase-gate-select {
+  margin-top: 10px;
+  max-width: 360px;
+}
+.purchase-toolbar,
+.admin-filter {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  margin: 4px 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+}
+.purchase-toolbar button,
+.admin-filter button {
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.purchase-toolbar button.active,
+.admin-filter button.active {
+  background: var(--ink);
+  color: #fff;
+}
+.purchase-list {
+  display: grid;
+  gap: 14px;
+}
+.purchase-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 18px;
+  align-items: start;
+}
+.purchase-card-main h3 {
+  margin: 4px 0;
+}
+.purchase-card-main p {
+  margin: 0 0 4px;
+}
+.purchase-card-main small {
+  color: var(--muted);
+}
+.purchase-card-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ---------- Página da loja ---------- */
+.store-info-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin: 22px 0 8px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+}
+.store-info-item {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+.store-info-item p {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.store-info-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.review-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: #d39b16;
+}
+.review-photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.review-photo-row .review-photo {
+  margin: 4px 0 0;
+}
+
+/* ---------- Administração ---------- */
+.admin-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.admin-section-head h2 {
+  margin: 0;
+}
+.admin-store-row,
+.moderation-row {
+  align-items: flex-start;
+}
+.admin-store-info,
+.moderation-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.admin-store-info p,
+.moderation-content p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.admin-store-title,
+.moderation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.admin-store-reason {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #8f2b35;
+}
+.moderation-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: none;
+}
+.moderation-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.moderation-photo {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.moderation-photo-open {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  cursor: zoom-in;
+}
+.moderation-photo-open img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  display: block;
+}
+.moderation-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+/* ---------- Consumidor ---------- */
+.profile-edit-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 0;
+  display: grid;
+  gap: 4px;
+  max-width: 520px;
+}
+.product-name-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.product-name-link:hover .product-name {
+  text-decoration: underline;
+}
+.detail-price-promo {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* Miniaturas de avaliações ficam delimitadas mesmo enquanto carregam. */
+.review-photo-item .review-photo,
+.review-photo-row .review-photo {
+  background: var(--paper);
+  border: 1px solid var(--border);
+}

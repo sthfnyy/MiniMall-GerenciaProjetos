@@ -42,15 +42,32 @@ export async function signIn(_users, email, password, client = getSupabaseClient
   return { user: data.user, session: data.session, accessToken: data.session.access_token };
 }
 
+// Perfis que podem ser escolhidos no cadastro público. Admin nunca é oferecido
+// (RN03) e o backend também recusa qualquer outro valor.
+export const PUBLIC_ACCOUNT_TYPES = ["consumidor", "lojista"];
+
 export async function signUp(_users, values, fetchImpl = globalThis.fetch) {
   const nomeCompleto = values.name?.trim();
   if (!nomeCompleto || nomeCompleto.length < 2) throw new Error("Informe seu nome completo.");
   if ((values.password || "").length < 8) throw new Error("A senha deve ter pelo menos 8 caracteres.");
-  const response = await fetchImpl(`${API_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nome_completo: nomeCompleto, email: values.email.trim().toLowerCase(), senha: values.password }),
-  });
+  if (!PUBLIC_ACCOUNT_TYPES.includes(values.accountType)) {
+    throw new Error("Escolha o tipo de conta: consumidor ou lojista.");
+  }
+  let response;
+  try {
+    response = await fetchImpl(`${API_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome_completo: nomeCompleto,
+        email: values.email.trim().toLowerCase(),
+        senha: values.password,
+        perfil: values.accountType,
+      }),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar ao MiniMall. Verifique se a API está em execução.");
+  }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = Array.isArray(body.detail) ? body.detail.map((item) => item.msg).join("; ") : body.detail;

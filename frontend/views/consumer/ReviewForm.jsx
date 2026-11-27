@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
+import { Star, X } from "lucide-react";
+import PhotoUploadButton from "../../components/PhotoUploadButton";
 import { Field } from "../../components/ui";
 import {
   MAX_REVIEW_PHOTOS,
-  REVIEW_PHOTO_TYPES,
   validateConsumerReviewPhoto,
 } from "../../services/reviews.js";
 
@@ -23,9 +23,7 @@ export default function ReviewForm({ store, onPublish, onCancel }) {
     [],
   );
 
-  const selectPhotos = (event) => {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
+  const selectPhotos = (files) => {
     setPhotoError("");
     const accepted = [];
 
@@ -113,47 +111,38 @@ export default function ReviewForm({ store, onPublish, onCancel }) {
           />
         </Field>
 
-        <div className="review-photo-controls">
+        <div className="review-photo-controls" aria-live="polite">
           <span className="eyebrow muted">FOTOS (OPCIONAL)</span>
-          <small>
-            {photos.length} de {MAX_REVIEW_PHOTOS} fotos · JPEG, PNG ou WebP até 5 MB
-          </small>
           {photos.length < MAX_REVIEW_PHOTOS ? (
-            <input
-              type="file"
-              accept={REVIEW_PHOTO_TYPES.join(",")}
-              multiple
+            <PhotoUploadButton
+              onSelect={selectPhotos}
               disabled={submitting}
-              aria-label={`Selecionar fotos para avaliação de ${store.name}`}
-              onChange={selectPhotos}
+              ariaLabel={`Adicionar fotos à avaliação de ${store.name}`}
+              remaining={MAX_REVIEW_PHOTOS - photos.length}
             />
           ) : (
-            <small>Limite de fotos atingido.</small>
+            <p className="photo-upload-limit">Limite de {MAX_REVIEW_PHOTOS} fotos atingido. Remova uma foto para trocar.</p>
           )}
           {photoError && <p className="error" role="alert">{photoError}</p>}
+          {photos.length > 0 && (
+            <ul className="photo-thumbs" aria-label="Fotos selecionadas">
+              {photos.map((photo, index) => (
+                <li className="photo-thumb" key={photo.preview}>
+                  <img src={photo.preview} alt={`Pré-visualização da foto ${index + 1}`} />
+                  <button
+                    type="button"
+                    className="photo-thumb-remove"
+                    disabled={submitting}
+                    aria-label={`Remover foto ${index + 1}`}
+                    onClick={() => removePhoto(index)}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-
-        {photos.length > 0 && (
-          <div className="review-photo-list">
-            {photos.map((photo, index) => (
-              <div className="review-photo-item" key={photo.preview}>
-                <img
-                  className="review-photo"
-                  src={photo.preview}
-                  alt={`Pré-visualização da foto ${index + 1}`}
-                />
-                <button
-                  className="text-button danger"
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => removePhoto(index)}
-                >
-                  Remover foto
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
 
         {error && <p className="error" role="alert">{error}</p>}
 

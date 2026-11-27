@@ -1,9 +1,15 @@
 import React from "react";
 import { MessageCircle, ArrowUpRight, ShieldCheck } from "lucide-react";
-import { buildWhatsAppLink } from "../services/contact.js";
+import { buildProductUrl, buildWhatsAppLink } from "../services/contact.js";
 
-export default function WhatsAppContactButton({ whatsapp, productName, price }) {
-  const href = buildWhatsAppLink({ whatsapp, productName, price });
+export default function WhatsAppContactButton({ whatsapp, productName, price, productId }) {
+  const href = buildWhatsAppLink({
+    whatsapp,
+    productName,
+    price,
+    productUrl: buildProductUrl(productId),
+  });
+  // Sem WhatsApp válido, nenhum botão quebrado é exibido.
   if (!href) return null;
 
   return (

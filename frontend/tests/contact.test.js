@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  buildProductUrl,
   buildWhatsAppLink,
   buildWhatsAppMessage,
   normalizeBrazilianWhatsApp,
@@ -68,9 +69,31 @@ test("retorna null para preço informado mas inválido", () => {
   assert.equal(buildWhatsAppLink({ whatsapp: "89999998888", productName: "Produto", price: -1 }), null);
 });
 
+test("mensagem inclui o link do produto quando disponível (RF26)", () => {
+  const url = buildProductUrl("abc-123", "http://127.0.0.1:5173");
+  assert.equal(url, "http://127.0.0.1:5173/#produto/abc-123");
+  const message = buildWhatsAppMessage({ productName: "Caderno artesanal", price: 22.5, productUrl: url });
+  // money() usa espaço não separável após "R$"; normaliza antes de comparar.
+  assert.equal(
+    message.replace(/ /g, " "),
+    "Olá! Tenho interesse no produto Caderno artesanal, no valor de R$ 22,50, anunciado no MiniMall:\nhttp://127.0.0.1:5173/#produto/abc-123",
+  );
+  const link = buildWhatsAppLink({ whatsapp: "(89) 99999-0000", productName: "Caderno artesanal", price: 22.5, productUrl: url });
+  assert.ok(link.startsWith("https://wa.me/5589999990000?text="));
+  assert.equal(decodeURIComponent(link.split("?text=")[1]), message);
+});
+
+test("link de produto com esquema inseguro é ignorado", () => {
+  assert.equal(buildProductUrl("x", "javascript:alert(1)"), "");
+  assert.equal(
+    buildWhatsAppMessage({ productName: "Caderno", productUrl: "javascript:alert(1)" }),
+    "Olá! Tenho interesse no produto Caderno anunciado no MiniMall.",
+  );
+});
+
 test("componente reutiliza o serviço e expõe um link externo acessível", async () => {
   const source = await readFile(new URL("../components/WhatsAppContactButton.jsx", import.meta.url), "utf8");
-  assert.match(source, /buildWhatsAppLink\(\{ whatsapp, productName, price \}\)/);
+  assert.match(source, /buildWhatsAppLink\(\{\s*whatsapp,\s*productName,\s*price,\s*productUrl: buildProductUrl\(productId\),?\s*\}\)/);
   assert.match(source, /if \(!href\) return null/);
   assert.match(source, /target="_blank"/);
   assert.match(source, /rel="noopener noreferrer"/);

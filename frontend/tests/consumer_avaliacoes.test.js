@@ -32,7 +32,7 @@ const httpError = (status, message = "Not Found") => {
 const source = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 // ---------------------------------------------------------------------------
-// Testes migrados do PDSI-I (tests/frontend.test.js)
+// Testes de avaliações do consumidor
 // ---------------------------------------------------------------------------
 
 test("API de avaliações lista somente pelo endpoint autenticado do consumidor", async () => {
@@ -63,7 +63,8 @@ test("API lista e normaliza avaliações da loja selecionada", async () => {
     }];
   });
 
-  assert.deepEqual(calls, [[`/consumidor/avaliacoes/loja/${STORE_ID}`]]);
+  // Leitura pública: não exige login (GET /lojas/{id}/avaliacoes).
+  assert.deepEqual(calls, [[`/lojas/${STORE_ID}/avaliacoes`, { authenticated: false }]]);
   assert.deepEqual(reviews[0], {
     id: "review-1",
     store: STORE_ID,
@@ -424,7 +425,7 @@ test("avaliação criada aparece depois na listagem do consumidor e da loja", as
       return photo;
     }
     if (path === "/consumidor/avaliacoes") return saved;
-    if (path === `/consumidor/avaliacoes/loja/${STORE_ID}`) {
+    if (path === `/lojas/${STORE_ID}/avaliacoes`) {
       return saved.map((review) => ({ ...review, consumidor_nome: "Ana" }));
     }
     throw httpError(404);
@@ -467,24 +468,32 @@ test("rotas de avaliação respeitam a matriz de autorização por role", () => 
   assert.equal(canAccessRoute("lojista/avaliacoes", { role: "admin" }), false);
 });
 
-test("App registra as rotas de avaliação do PDSI-I", async () => {
+test("App registra as rotas de avaliação", async () => {
   const app = await source("../App.jsx");
 
   assert.match(app, /route === `consumidor\/avaliar\/\$\{s\.id\}`/);
   assert.match(app, /route === "consumidor\/avaliacoes" && <ConsumerReviews/);
   assert.match(app, /route === "lojista\/avaliacoes" && <StoreReviews/);
   assert.match(app, /reviewStore && <ReviewForm/);
-  assert.match(app, /"consumidor\/avaliacoes", "lojista\/avaliacoes"\]\.includes\(route\)/);
+  assert.match(app, /"consumidor\/avaliacoes", "consumidor\/compras", "lojista\/avaliacoes", "lojista\/compras"\]\.includes\(route\)/);
+  assert.match(app, /route === "consumidor\/compras" && <ConsumerPurchases/);
+  assert.match(app, /route === "lojista\/compras" && <PurchaseConfirmations/);
   assert.match(app, /const restricted = !canAccessRoute\(route, user\)/);
 });
 
 test("formulário de avaliação oferece fotos com preview, remoção e carregamento", async () => {
   const form = await source("../views/consumer/ReviewForm.jsx");
+  const upload = await source("../components/PhotoUploadButton.jsx");
 
-  assert.match(form, /type="file"/);
+  assert.match(form, /<PhotoUploadButton/);
+  assert.match(upload, /type="file"/);
+  assert.match(upload, /Adicionar fotos/);
+  assert.match(upload, /Até 3 fotos\. JPEG, PNG ou WebP\. Máximo de 5 MB por imagem\./);
+  assert.match(form, /photo-thumb-remove/);
+  assert.match(form, /Limite de \{MAX_REVIEW_PHOTOS\} fotos atingido/);
   assert.match(form, /URL\.createObjectURL/);
   assert.match(form, /URL\.revokeObjectURL/);
-  assert.match(form, /Remover foto/);
+  assert.match(form, /Remover foto \$\{index \+ 1\}/);
   assert.match(form, /Publicando/);
   assert.match(form, /role="alert"/);
   assert.doesNotMatch(form, /localStorage|readAsDataURL/);

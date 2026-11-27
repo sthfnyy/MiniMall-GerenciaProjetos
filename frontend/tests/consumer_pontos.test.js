@@ -43,7 +43,7 @@ const apiResponse = () => ({
 });
 
 // ---------------------------------------------------------------------------
-// Testes migrados do PDSI-I (tests/frontend.test.js), sem os de modo demo
+// Testes de pontos (sem modo demo)
 // ---------------------------------------------------------------------------
 
 test("getConsumerPoints consulta somente GET /consumidor/pontos", async () => {
@@ -191,7 +191,7 @@ test("rota de pontos aceita somente consumidor autenticado", () => {
   assert.equal(canAccessRoute("consumidor/pontos", { role: "admin" }), false);
 });
 
-test("App e perfil restauram o acesso a #consumidor/pontos do PDSI-I", async () => {
+test("App e perfil restauram o acesso a #consumidor/pontos", async () => {
   const app = await source("../App.jsx");
   const profile = await source("../views/consumer/ConsumerProfile.jsx");
 
@@ -199,10 +199,10 @@ test("App e perfil restauram o acesso a #consumidor/pontos do PDSI-I", async () 
   assert.match(app, /onPoints=\{\(\) => go\("consumidor\/pontos"\)\}/);
   assert.match(app, /"consumidor\/pontos", "consumidor\/avaliacoes"/);
   assert.match(app, /const restricted = !canAccessRoute\(route, user\)/);
-  assert.match(profile, /onClick=\{onPoints\}><Coins size=\{17\} \/>Meus pontos/);
+  assert.match(profile, /onClick=\{onPoints\}><Coins size=\{17\} aria-hidden="true" \/>Meus pontos/);
 });
 
-test("tela de pontos mostra carregamento, erro, vazio, saldo e histórico do PDSI-I", async () => {
+test("tela de pontos mostra carregamento, erro, vazio, saldo e histórico", async () => {
   const view = await source("../views/consumer/ConsumerPoints.jsx");
 
   assert.match(view, /Carregando seus pontos\.\.\./);

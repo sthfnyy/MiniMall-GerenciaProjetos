@@ -16,28 +16,40 @@ export function normalizeBrazilianWhatsApp(whatsapp) {
  * Gera a mensagem de interesse para o produto recebido.
  * Retorna null para nome vazio ou para preço informado que não seja válido.
  */
-export function buildWhatsAppMessage({ productName, price } = {}) {
+export function buildWhatsAppMessage({ productName, price, productUrl } = {}) {
   const name = typeof productName === "string" ? productName.trim() : "";
   if (!name) return null;
 
+  // Link do produto: só http(s), para não injetar outro esquema.
+  const link = typeof productUrl === "string" && /^https?:\/\//i.test(productUrl.trim())
+    ? productUrl.trim()
+    : "";
+  const suffix = link ? `:\n${link}` : ".";
+
   const hasPrice = price !== undefined && price !== null && price !== "";
-  if (!hasPrice) return `Olá! Tenho interesse no produto ${name} anunciado no MiniMall.`;
+  if (!hasPrice) return `Olá! Tenho interesse no produto ${name} anunciado no MiniMall${suffix}`;
 
   const numericPrice = typeof price === "number"
     ? price
     : Number(String(price).trim().replace(",", "."));
   if (!Number.isFinite(numericPrice) || numericPrice < 0) return null;
 
-  return `Olá! Tenho interesse no produto ${name}, no valor de ${money(numericPrice)}, anunciado no MiniMall.`;
+  return `Olá! Tenho interesse no produto ${name}, no valor de ${money(numericPrice)}, anunciado no MiniMall${suffix}`;
+}
+
+/** URL pública do produto na vitrine (rotas por hash). */
+export function buildProductUrl(productId, origin = globalThis.location?.origin) {
+  if (!productId || !origin || !/^https?:\/\//i.test(origin)) return "";
+  return `${origin}/#produto/${encodeURIComponent(productId)}`;
 }
 
 /**
  * Cria o link oficial do WhatsApp Web/App a partir de dados fornecidos pela tela.
  * Retorna null se o WhatsApp, o produto ou um preço informado forem inválidos.
  */
-export function buildWhatsAppLink({ whatsapp, productName, price } = {}) {
+export function buildWhatsAppLink({ whatsapp, productName, price, productUrl } = {}) {
   const number = normalizeBrazilianWhatsApp(whatsapp);
-  const message = buildWhatsAppMessage({ productName, price });
+  const message = buildWhatsAppMessage({ productName, price, productUrl });
   if (!number || !message) return null;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }

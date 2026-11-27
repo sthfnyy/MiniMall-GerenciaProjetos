@@ -58,6 +58,11 @@ test("vitrine pública consulta /produtos sem autenticação e monta lojas e cat
   const calls = [];
   const service = createPublicCatalogService(async (url, options) => {
     calls.push({ url, options });
+    if (url === "/lojas") {
+      return [
+        { id: "1ad8150b-eaf6-4c68-9d34-0a18321b6630", nome_loja: "Dona Flor", endereco_cidade: "Picos", endereco_uf: "PI", whatsapp: "89999998888" },
+      ];
+    }
     return [
       rawProduct(),
       rawProduct({
@@ -69,9 +74,12 @@ test("vitrine pública consulta /produtos sem autenticação e monta lojas e cat
   });
 
   const catalog = await service.load();
-  assert.equal(calls.length, 1);
+  // Produtos e lojas públicas são carregados sem autenticação.
+  assert.equal(calls.length, 2);
   assert.match(calls[0].url, /^\/produtos\?/);
   assert.equal(calls[0].options.authenticated, false);
+  assert.equal(calls[1].url, "/lojas");
+  assert.equal(calls[1].options.authenticated, false);
   assert.equal(catalog.products.length, 2);
   assert.deepEqual(catalog.categories, ["Vestuário"]);
   assert.equal(catalog.stores.length, 1);
@@ -80,6 +88,36 @@ test("vitrine pública consulta /produtos sem autenticação e monta lojas e cat
   const sortedAsc = await service.products({ sort: "menor" }, catalog.categoryRecords);
   assert.equal(sortedAsc[0].price, 89.9);
   assert.equal(sortedAsc[1].price, 159.9);
+});
+
+test("lojas aprovadas sem produtos aparecem e trazem dados comerciais", () => {
+  const catalog = buildPublicCatalog([rawProduct()], [
+    {
+      id: "1ad8150b-eaf6-4c68-9d34-0a18321b6630", nome_loja: "Dona Flor", descricao: "Moda",
+      endereco_logradouro: "Rua A", endereco_numero: "10", endereco_cidade: "Picos", endereco_uf: "PI",
+      horario_funcionamento: { descricao: "Seg a Sex 8h-18h" }, whatsapp: "89999998888",
+      instagram: "@donaflor", facebook: "javascript:alert(1)", media_avaliacoes: 4.5, total_avaliacoes: 2,
+    },
+    { id: "2bd8150b-eaf6-4c68-9d34-0a18321b6631", nome_loja: "Loja Nova", endereco_cidade: "Picos", endereco_uf: "PI", whatsapp: "" },
+  ]);
+  assert.equal(catalog.stores.length, 2);
+  const [flor, nova] = catalog.stores;
+  assert.equal(flor.address, "Rua A, 10, Picos – PI");
+  assert.equal(flor.hours, "Seg a Sex 8h-18h");
+  assert.equal(flor.instagram, "https://instagram.com/donaflor");
+  assert.equal(flor.facebook, "");
+  assert.equal(flor.rating, 4.5);
+  assert.equal(flor.category, "Vestuário");
+  assert.match(flor.mapsUrl, /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/);
+  assert.equal(nova.name, "Loja Nova");
+  assert.equal(nova.productCount, 0);
+});
+
+test("preço promocional da API vira destaque no card", () => {
+  const item = normalizePublicProduct(rawProduct({ preco_promocional: "129.90" }));
+  assert.equal(item.sale, 129.9);
+  assert.equal(item.price, 159.9);
+  assert.equal(normalizePublicProduct(rawProduct()).sale, 0);
 });
 
 test("normalização de produto bloqueia URLs inseguras e preserva dados da API", () => {

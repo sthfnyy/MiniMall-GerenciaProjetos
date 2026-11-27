@@ -60,3 +60,16 @@ export async function getConsumerPoints(request = apiRequest) {
   }
   return normalizeConsumerPoints(response);
 }
+
+// Texto amigável no extrato: nunca exibe identificadores técnicos (ex.: RF08:foto:<uuid>).
+export function movementOrigin(movement = {}) {
+  const isCredit = movement.tipo !== "resgate";
+  const origin = movement.origem
+    || (String(movement.descricao || "").startsWith("RF08:foto:") ? "foto"
+      : movement.avaliacao_id || /avalia/i.test(movement.descricao || "") ? "avaliacao" : "outro");
+  if (origin === "foto") return "Foto adicionada à avaliação";
+  if (origin === "avaliacao") return "Avaliação publicada";
+  const text = String(movement.descricao || "");
+  if (text && !/^RF\d+:/i.test(text)) return text;
+  return isCredit ? "Crédito de pontos" : "Resgate de pontos";
+}

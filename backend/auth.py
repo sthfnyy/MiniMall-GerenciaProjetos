@@ -1,3 +1,4 @@
+import time
 import uuid
 
 import httpx
@@ -7,14 +8,34 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .config.config import settings
 from .config.database import get_db
 from .models import Profile, UserRole
 
 security = HTTPBearer(auto_error=False)
 
+# Projeto usado historicamente pela equipe; SUPABASE_URL tem precedência.
+_SUPABASE_URL_PADRAO = "https://fbwhpontyucoifhehysn.supabase.co"
 SUPABASE_JWKS_URL = (
-    "https://fbwhpontyucoifhehysn.supabase.co/auth/v1/.well-known/jwks.json"
+    f"{(settings.supabase_url or _SUPABASE_URL_PADRAO).rstrip('/')}"
+    "/auth/v1/.well-known/jwks.json"
 )
+
+# As chaves públicas mudam raramente: evita uma requisição ao Supabase por chamada.
+_JWKS_TTL_SEGUNDOS = 600
+_jwks_cache: dict = {"chaves": None, "expira_em": 0.0}
+
+
+async def _obter_jwks(forcar: bool = False) -> dict:
+    agora = time.monotonic()
+    if not forcar and _jwks_cache["chaves"] and _jwks_cache["expira_em"] > agora:
+        return _jwks_cache["chaves"]
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(SUPABASE_JWKS_URL)
+        response.raise_for_status()
+        jwks = response.json()
+    _jwks_cache.update(chaves=jwks, expira_em=agora + _JWKS_TTL_SEGUNDOS)
+    return jwks
 
 
 async def get_current_user_id(
@@ -29,18 +50,21 @@ async def get_current_user_id(
     token = credentials.credentials
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(SUPABASE_JWKS_URL)
-            response.raise_for_status()
-            jwks = response.json()
-
         header = jwt.get_unverified_header(token)
         kid = header.get("kid")
 
+        jwks = await _obter_jwks()
         key = next(
             (key for key in jwks["keys"] if key.get("kid") == kid),
             None,
         )
+        if key is None:
+            # Rotação de chaves: tenta uma vez com o JWKS atualizado.
+            jwks = await _obter_jwks(forcar=True)
+            key = next(
+                (key for key in jwks["keys"] if key.get("kid") == kid),
+                None,
+            )
 
         if key is None:
             raise JWTError("Chave pública correspondente ao kid não encontrada")

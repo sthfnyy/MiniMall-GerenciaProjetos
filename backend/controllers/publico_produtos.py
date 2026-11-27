@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,8 +50,13 @@ async def buscar_produtos(
 
     termo = q.strip() if q else ""
     if termo:
+        padrao = f"%{_escapar_like(termo)}%"
+        # RF20: o termo é procurado no título OU na descrição do produto.
         consulta = consulta.where(
-            Produto.titulo.ilike(f"%{_escapar_like(termo)}%", escape="\\")
+            or_(
+                Produto.titulo.ilike(padrao, escape="\\"),
+                Produto.descricao.ilike(padrao, escape="\\"),
+            )
         )
     if categoria_id is not None:
         consulta = consulta.where(Produto.categoria_id == categoria_id)

@@ -21,6 +21,9 @@ class FakeResult:
     def scalar_one_or_none(self):
         return self.item
 
+    def one_or_none(self):
+        return self.item
+
     def scalars(self):
         return self
 
@@ -139,28 +142,26 @@ class RF066TestCase(unittest.TestCase):
         response = self.client.delete(f"/admin/categorias/{uuid.uuid4()}")
         self.assertEqual(response.status_code, 404)
 
-    def test_admin_lista_avaliacoes(self):
-        avaliacao = SimpleNamespace(
-            id=uuid.uuid4(), loja_id=uuid.uuid4(), usuario_id=uuid.uuid4(),
-            nota=4, comentario="Boa loja", foto_url="https://example.com/foto.jpg",
-            criado_em=datetime.now(UTC),
-        )
-        self.autenticar(session=FakeSession([FakeResult(items=[avaliacao])]))
+    # O fluxo completo da moderação (consumidor, loja, fotos, estorno de pontos e
+    # limpeza do Storage) é coberto em test_jornadas_integracao.py.
+
+    def test_admin_lista_avaliacoes_vazia(self):
+        self.autenticar(session=FakeSession([FakeResult(items=[])]))
         response = self.client.get("/admin/moderacao/avaliacoes")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[0]["nota"], 4)
+        self.assertEqual(response.json(), [])
 
-    def test_admin_remove_avaliacao(self):
-        session = self.autenticar(session=FakeSession([FakeResult(rowcount=1)]))
+    def test_admin_remove_avaliacao_inexistente_retorna_404(self):
+        session = self.autenticar(session=FakeSession([FakeResult(item=None)]))
         response = self.client.delete(f"/admin/moderacao/avaliacoes/{uuid.uuid4()}")
-        self.assertEqual(response.status_code, 204)
-        self.assertTrue(session.committed)
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(session.committed)
 
-    def test_admin_remove_foto(self):
-        session = self.autenticar(session=FakeSession([FakeResult(rowcount=1)]))
+    def test_admin_remove_foto_inexistente_retorna_404(self):
+        session = self.autenticar(session=FakeSession([FakeResult(item=None)]))
         response = self.client.delete(f"/admin/moderacao/avaliacao-fotos/{uuid.uuid4()}")
-        self.assertEqual(response.status_code, 204)
-        self.assertTrue(session.committed)
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(session.committed)
 
 
 if __name__ == "__main__":
